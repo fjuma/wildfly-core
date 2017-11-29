@@ -336,16 +336,16 @@ public class KeyStoresTestCase extends AbstractSubsystemTest {
     @Test
     public void testImportSingleCertificateReply() throws Exception {
         String replyFileName = "/test-single-cert-reply.cert";
-        testImportCertificate(replyFileName);
+        testImportCertificateReply(replyFileName);
     }
 
     @Test
     public void testImportCertificateChainReply() throws Exception {
         String replyFileName = "/test-cert-chain-reply.cert";
-        testImportCertificate(replyFileName);
+        testImportCertificateReply(replyFileName);
     }
 
-    private void testImportCertificate(String replyFileName) throws Exception {
+    private void testImportCertificateReply(String replyFileName) throws Exception {
         addKeyStore();
 
         try {
@@ -372,10 +372,74 @@ public class KeyStoresTestCase extends AbstractSubsystemTest {
             Certificate[] chain = keyStore.getCertificateChain("ssmith");
             X509Certificate firstCertificate = (X509Certificate) chain[0];
             X509Certificate secondCertificate = (X509Certificate) chain[1];
+            String expectedIssuerDn = "O=Root Certificate Authority, EMAILADDRESS=elytron@wildfly.org, C=UK, ST=Elytron, CN=Elytron CA";
             assertEquals(new X500Principal("CN=ssmith, OU=jboss, O=red hat, L=raleigh, ST=north carolina, C=us"), firstCertificate.getSubjectX500Principal());
-            assertEquals(new X500Principal("O=Root Certificate Authority, EMAILADDRESS=elytron@wildfly.org, C=UK, ST=Elytron, CN=Elytron CA"), firstCertificate.getIssuerX500Principal());
-            assertEquals(new X500Principal("O=Root Certificate Authority, EMAILADDRESS=elytron@wildfly.org, C=UK, ST=Elytron, CN=Elytron CA"), secondCertificate.getSubjectX500Principal());
-            assertEquals(new X500Principal("O=Root Certificate Authority, EMAILADDRESS=elytron@wildfly.org, C=UK, ST=Elytron, CN=Elytron CA"), secondCertificate.getIssuerX500Principal());
+            assertEquals(new X500Principal(expectedIssuerDn), firstCertificate.getIssuerX500Principal());
+            assertEquals(new X500Principal(expectedIssuerDn), secondCertificate.getSubjectX500Principal());
+            assertEquals(new X500Principal(expectedIssuerDn), secondCertificate.getIssuerX500Principal());
+        } finally {
+            removeKeyStore();
+        }
+    }
+
+    @Test
+    public void testImportUntrustedCertificateReplyWithValidation() throws Exception {
+        testImportUntrustedCertificateReply(true);
+    }
+
+    @Test
+    public void testImportUntrustedCertificateReplyWithoutValidation() throws Exception {
+        testImportUntrustedCertificateReply(false);
+    }
+
+    private void testImportUntrustedCertificateReply(boolean validate) throws Exception {
+        // top-most certificate in the reply is not present in the keystore or cacerts file
+        String replyFileName = "/test-untrusted-cert-chain-reply.cert";
+
+        addKeyStore();
+
+        try {
+            ServiceName serviceName = Capabilities.KEY_STORE_RUNTIME_CAPABILITY.getCapabilityServiceName(KEYSTORE_NAME);
+            KeyStore keyStore = (KeyStore) services.getContainer().getService(serviceName).getValue();
+            assertNotNull(keyStore);
+            KeyStore.PrivateKeyEntry aliasBefore = (KeyStore.PrivateKeyEntry) keyStore.getEntry("ssmith", new KeyStore.PasswordProtection(KEY_PASSWORD.toCharArray()));
+            assertEquals(1, aliasBefore.getCertificateChain().length);
+
+            ModelNode operation = new ModelNode();
+            operation.get(ClientConstants.OP_ADDR).add("subsystem", "elytron").add("key-store", KEYSTORE_NAME);
+            operation.get(ClientConstants.OP).set(ElytronDescriptionConstants.IMPORT_CERTIFICATE);
+            operation.get(ElytronDescriptionConstants.ALIAS).set("ssmith");
+            operation.get(CredentialReference.CREDENTIAL_REFERENCE).get(CredentialReference.CLEAR_TEXT).set(KEY_PASSWORD);
+            Path resources = Paths.get(KeyStoresTestCase.class.getResource(".").toURI());
+            operation.get(ElytronDescriptionConstants.PATH).set(resources + replyFileName);
+            operation.get(ElytronDescriptionConstants.VALIDATE).set(validate);
+            operation.get(ElytronDescriptionConstants.TRUST_CACERTS).set(true);
+
+            if (validate) {
+                assertFailed(services.executeOperation(operation));
+                keyStore = (KeyStore) services.getContainer().getService(serviceName).getValue();
+                assertNotNull(keyStore);
+                KeyStore.PrivateKeyEntry aliasAfter = (KeyStore.PrivateKeyEntry) keyStore.getEntry("ssmith", new KeyStore.PasswordProtection(KEY_PASSWORD.toCharArray()));
+                assertEquals(aliasBefore.getCertificate(), aliasAfter.getCertificate());
+                assertArrayEquals(aliasBefore.getCertificateChain(), aliasAfter.getCertificateChain());
+            } else {
+                assertSuccess(services.executeOperation(operation));
+
+                ModelNode alias = readAlias("ssmith");
+                assertEquals(KeyStore.PrivateKeyEntry.class.getSimpleName(), alias.get(ElytronDescriptionConstants.ENTRY_TYPE).asString());
+                assertEquals(2, alias.get(ElytronDescriptionConstants.CERTIFICATE_CHAIN).asList().size());
+
+                keyStore = (KeyStore) services.getContainer().getService(serviceName).getValue();
+                assertNotNull(keyStore);
+                Certificate[] chain = keyStore.getCertificateChain("ssmith");
+                X509Certificate firstCertificate = (X509Certificate) chain[0];
+                X509Certificate secondCertificate = (X509Certificate) chain[1];
+                String expectedIssuerDn = "O=Another Root Certificate Authority, EMAILADDRESS=anotherca@wildfly.org, C=UK, ST=Elytron, CN=Another Elytron CA";
+                assertEquals(new X500Principal("CN=ssmith, OU=jboss, O=red hat, L=raleigh, ST=north carolina, C=us"), firstCertificate.getSubjectX500Principal());
+                assertEquals(new X500Principal(expectedIssuerDn), firstCertificate.getIssuerX500Principal());
+                assertEquals(new X500Principal(expectedIssuerDn), secondCertificate.getSubjectX500Principal());
+                assertEquals(new X500Principal(expectedIssuerDn), secondCertificate.getIssuerX500Principal());
+            }
         } finally {
             removeKeyStore();
         }
@@ -392,23 +456,75 @@ public class KeyStoresTestCase extends AbstractSubsystemTest {
             ModelNode operation = new ModelNode();
             operation.get(ClientConstants.OP_ADDR).add("subsystem", "elytron").add("key-store", KEYSTORE_NAME);
             operation.get(ClientConstants.OP).set(ElytronDescriptionConstants.IMPORT_CERTIFICATE);
-            operation.get(ElytronDescriptionConstants.ALIAS).set("anotherCA");
+            operation.get(ElytronDescriptionConstants.ALIAS).set("intermediateCA");
             Path resources = Paths.get(KeyStoresTestCase.class.getResource(".").toURI());
             operation.get(ElytronDescriptionConstants.PATH).set(resources + replyFileName);
-            operation.get(ElytronDescriptionConstants.VALIDATE).set(false);
+            operation.get(ElytronDescriptionConstants.TRUST_CACERTS).set(true);
             assertSuccess(services.executeOperation(operation));
             assertEquals(numAliasesBefore + 1, readAliases().size());
 
-            ModelNode alias = readAlias("anotherCA");
+            ModelNode alias = readAlias("intermediateCA");
             assertEquals(KeyStore.TrustedCertificateEntry.class.getSimpleName(), alias.get(ElytronDescriptionConstants.ENTRY_TYPE).asString());
             assertTrue(alias.get(ElytronDescriptionConstants.CERTIFICATE).isDefined());
 
             ServiceName serviceName = Capabilities.KEY_STORE_RUNTIME_CAPABILITY.getCapabilityServiceName(KEYSTORE_NAME);
             KeyStore keyStore = (KeyStore) services.getContainer().getService(serviceName).getValue();
             assertNotNull(keyStore);
-            X509Certificate certificate = (X509Certificate) keyStore.getCertificate("anotherCA");
-            assertEquals(new X500Principal("O=Another Root Certificate Authority, EMAILADDRESS=anotherca@wildfly.org, C=UK, ST=Elytron, CN=Another Elytron CA"), certificate.getSubjectX500Principal());
-            assertEquals(new X500Principal("O=Another Root Certificate Authority, EMAILADDRESS=anotherca@wildfly.org, C=UK, ST=Elytron, CN=Another Elytron CA"), certificate.getIssuerX500Principal());
+            X509Certificate certificate = (X509Certificate) keyStore.getCertificate("intermediateCA");
+            assertEquals(new X500Principal("O=Intermediate Certificate Authority, EMAILADDRESS=intermediateca@wildfly.org, C=UK, ST=Elytron, CN=Intermediate Elytron CA"), certificate.getSubjectX500Principal());
+            assertEquals(new X500Principal("O=Root Certificate Authority, EMAILADDRESS=elytron@wildfly.org, C=UK, ST=Elytron, CN=Elytron CA"), certificate.getIssuerX500Principal());
+        } finally {
+            removeKeyStore();
+        }
+    }
+
+    @Test
+    public void testImportUntrustedCertificateWithValidation() throws Exception {
+        testImportUntrustedCertificate(true);
+    }
+
+    @Test
+    public void testImportUntrustedCertificateWithoutValidation() throws Exception {
+        testImportUntrustedCertificate(false);
+    }
+
+    private void testImportUntrustedCertificate(boolean validate) throws Exception {
+        // issuer certificate is not present in the keystore or cacerts file
+        String replyFileName = "/test-untrusted.cert";
+
+        addKeyStore();
+
+        try {
+            int numAliasesBefore = readAliases().size();
+
+            ModelNode operation = new ModelNode();
+            operation.get(ClientConstants.OP_ADDR).add("subsystem", "elytron").add("key-store", KEYSTORE_NAME);
+            operation.get(ClientConstants.OP).set(ElytronDescriptionConstants.IMPORT_CERTIFICATE);
+            operation.get(ElytronDescriptionConstants.ALIAS).set("anotherCA");
+            Path resources = Paths.get(KeyStoresTestCase.class.getResource(".").toURI());
+            operation.get(ElytronDescriptionConstants.PATH).set(resources + replyFileName);
+            operation.get(ElytronDescriptionConstants.VALIDATE).set(validate);
+            operation.get(ElytronDescriptionConstants.TRUST_CACERTS).set(true);
+
+            if (validate) {
+                assertFailed(services.executeOperation(operation));
+                assertEquals(numAliasesBefore, readAliases().size());
+            } else {
+                assertSuccess(services.executeOperation(operation));
+                assertEquals(numAliasesBefore + 1, readAliases().size());
+
+                ModelNode alias = readAlias("anotherCA");
+                assertEquals(KeyStore.TrustedCertificateEntry.class.getSimpleName(), alias.get(ElytronDescriptionConstants.ENTRY_TYPE).asString());
+                assertTrue(alias.get(ElytronDescriptionConstants.CERTIFICATE).isDefined());
+
+                ServiceName serviceName = Capabilities.KEY_STORE_RUNTIME_CAPABILITY.getCapabilityServiceName(KEYSTORE_NAME);
+                KeyStore keyStore = (KeyStore) services.getContainer().getService(serviceName).getValue();
+                assertNotNull(keyStore);
+                String expectedDn = "O=Another Root Certificate Authority, EMAILADDRESS=anotherca@wildfly.org, C=UK, ST=Elytron, CN=Another Elytron CA";
+                X509Certificate certificate = (X509Certificate) keyStore.getCertificate("anotherCA");
+                assertEquals(new X500Principal(expectedDn), certificate.getSubjectX500Principal());
+                assertEquals(new X500Principal(expectedDn), certificate.getIssuerX500Principal());
+            }
         } finally {
             removeKeyStore();
         }
@@ -479,7 +595,7 @@ public class KeyStoresTestCase extends AbstractSubsystemTest {
 
             keyStore = (KeyStore) services.getContainer().getService(serviceName).getValue();
             assertNotNull(keyStore);
-            assertTrue(!keyStore.containsAlias("ssmith"));
+            assertTrue(! keyStore.containsAlias("ssmith"));
             KeyStore.PrivateKeyEntry aliasAfter = (KeyStore.PrivateKeyEntry) keyStore.getEntry("sallysmith", new KeyStore.PasswordProtection(KEY_PASSWORD.toCharArray()));
             assertEquals(aliasBefore.getCertificate(), aliasAfter.getCertificate());
             assertArrayEquals(aliasBefore.getCertificateChain(), aliasAfter.getCertificateChain());

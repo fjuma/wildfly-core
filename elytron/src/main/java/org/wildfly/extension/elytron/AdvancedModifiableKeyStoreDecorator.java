@@ -434,38 +434,38 @@ class AdvancedModifiableKeyStoreDecorator extends ModifiableKeyStoreDecorator {
                     keyStore.setKeyEntry(alias, privateKey, keyPassword, certificateChain);
                 } else if (! keyStore.containsAlias(alias)) {
                     // import a trusted certificate
-                    final X509Certificate reply;
+                    final X509Certificate trustedCertificate;
                     try (FileInputStream fis = new FileInputStream(resolvedPath)) {
-                        reply = (X509Certificate) certificateFactory.generateCertificate(fis);
+                        trustedCertificate = (X509Certificate) certificateFactory.generateCertificate(fis);
                     }
                     if (validate) {
-                        String trustedCertificateAlias = keyStore.getCertificateAlias(reply);
+                        String trustedCertificateAlias = keyStore.getCertificateAlias(trustedCertificate);
                         if (trustedCertificateAlias != null) {
                             throw ROOT_LOGGER.trustedCertificateAlreadyInKeyStore(trustedCertificateAlias);
                         }
                         final KeyStore cacertsKeyStore = getCacertsKeyStore(trustCacerts);
-                        if (reply.getIssuerDN().equals(reply.getSubjectDN())) {
-                            reply.verify(reply.getPublicKey());
+                        if (trustedCertificate.getIssuerDN().equals(trustedCertificate.getSubjectDN())) {
+                            trustedCertificate.verify(trustedCertificate.getPublicKey());
                             // self-signed, not found in keystore
                             if (cacertsKeyStore != null) {
-                                trustedCertificateAlias = cacertsKeyStore.getCertificateAlias(reply);
+                                trustedCertificateAlias = cacertsKeyStore.getCertificateAlias(trustedCertificate);
                                 if (trustedCertificateAlias != null) {
                                     throw ROOT_LOGGER.trustedCertificateAlreadyInCacertsKeyStore(trustedCertificateAlias);
                                 }
                             }
-                            writeCertificate(context.getResult().get(ElytronDescriptionConstants.CERTIFICATE), reply);
+                            writeCertificate(context.getResult().get(ElytronDescriptionConstants.CERTIFICATE), trustedCertificate);
                             throw ROOT_LOGGER.unableToDetermineIfCertificateIsTrusted();
                         } else {
                             try {
                                 final HashMap<Principal, HashSet<X509Certificate>> certificatesMap = getKeyStoreCertificates(keyStore, cacertsKeyStore);
-                                X500.createX509CertificateChain(reply, certificatesMap);
+                                X500.createX509CertificateChain(trustedCertificate, certificatesMap);
                             } catch (IllegalArgumentException e) {
-                                writeCertificate(context.getResult().get(ElytronDescriptionConstants.CERTIFICATE), reply);
+                                writeCertificate(context.getResult().get(ElytronDescriptionConstants.CERTIFICATE), trustedCertificate);
                                 throw ROOT_LOGGER.unableToDetermineIfCertificateIsTrusted();
                             }
                         }
                     }
-                    keyStore.setCertificateEntry(alias, reply);
+                    keyStore.setCertificateEntry(alias, trustedCertificate);
                 }
             } catch (Exception e) {
                 if (e instanceof OperationFailedException) {
