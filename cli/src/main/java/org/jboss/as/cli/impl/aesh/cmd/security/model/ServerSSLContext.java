@@ -34,6 +34,7 @@ public class ServerSSLContext {
     private List<String> protocols;
     private boolean authenticationOptional;
     private String cipherSuiteFilter = "DEFAULT";
+    private String cipherSuiteNames = "TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256";
     private String finalPrincipalTransformer;
     private String postRealmPrincipalTransformer;
     private String preRealmPrincipalTransformer;
@@ -276,6 +277,11 @@ public class ServerSSLContext {
             sslCtx.get(Util.CIPHER_SUITE_FILTER).set(cipherSuiteFilter);
         } else {
             sslCtx.get(Util.CIPHER_SUITE_FILTER);
+        }
+        if (cipherSuiteNames != null) {
+            sslCtx.get(Util.CIPHER_SUITE_NAMES).set(cipherSuiteNames);
+        } else {
+            sslCtx.get(Util.CIPHER_SUITE_NAMES);
         }
         if (finalPrincipalTransformer != null) {
             sslCtx.get(Util.FINAL_PRINCIPAL_TRANSFORMER).set(finalPrincipalTransformer);
