@@ -27,6 +27,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+//import org.junit.Ignore;
 import org.junit.Test;
 import org.wildfly.common.function.ExceptionSupplier;
 import org.wildfly.common.iteration.ByteIterator;
@@ -79,6 +80,7 @@ import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.SUC
  * Tests of LDAP related components (excluded from their natural TestCases to prevent repeated LDAP starting)
  * @author <a href="mailto:jkalina@redhat.com">Jan Kalina</a>
  */
+//@Ignore
 public class LdapTestCase extends AbstractSubsystemTest {
 
     private KernelServices services;
