@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * In-memory schema-only partition which loads the data in the similar way as the
- * {@link org.apache.directory.api.ldap.schemaloader.JarLdifSchemaLoader}.
+ * {@link import org.apache.directory.api.ldap.schema.loader.JarLdifSchemaLoader;}.
  *
  * @author Josef Cacek
  */

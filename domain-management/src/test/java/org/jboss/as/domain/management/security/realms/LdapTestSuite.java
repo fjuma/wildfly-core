@@ -167,6 +167,7 @@ public class LdapTestSuite {
         pf.addIndex(p, "departmentNumber", 10);
         pf.addIndex(p, "member", 10);
         pf.addIndex(p, "memberOf", 10);
+        p.setCacheService(directoryService.getCacheService());
         p.initialize();
         directoryService.addPartition(p);
     }

@@ -88,6 +88,8 @@ public class InMemoryDirectoryServiceFactory implements DirectoryServiceFactory 
 
     private static Logger LOG = Logger.getLogger(InMemoryDirectoryServiceFactory.class);
 
+    private static volatile int counter = 1;
+
     private final DirectoryService directoryService;
     private final PartitionFactory partitionFactory;
     private CacheManager cacheManager;
@@ -126,7 +128,8 @@ public class InMemoryDirectoryServiceFactory implements DirectoryServiceFactory 
             return;
         }
 
-        directoryService.setInstanceId(name);
+        int id = counter++;
+        directoryService.setInstanceId(name + id);
 
         // instance layout
         InstanceLayout instanceLayout = new InstanceLayout(System.getProperty("java.io.tmpdir") + "/server-work-" + name);
@@ -140,8 +143,10 @@ public class InMemoryDirectoryServiceFactory implements DirectoryServiceFactory 
         directoryService.setInstanceLayout(instanceLayout);
 
         // EhCache in disabled-like-mode
+        String cacheName = "ApacheDSTestCache-" +  id;
         Configuration ehCacheConfig = new Configuration();
-        CacheConfiguration defaultCache = new CacheConfiguration("ApacheDSTestCache", 1).eternal(false).timeToIdleSeconds(30)
+        ehCacheConfig.setName(cacheName);
+        CacheConfiguration defaultCache = new CacheConfiguration(cacheName, 1).eternal(false).timeToIdleSeconds(30)
                 .timeToLiveSeconds(30).overflowToDisk(false);
         ehCacheConfig.addDefaultCache(defaultCache);
         cacheManager = new CacheManager(ehCacheConfig);
@@ -176,6 +181,7 @@ public class InMemoryDirectoryServiceFactory implements DirectoryServiceFactory 
                         "system"));
         systemPartition.setSchemaManager(directoryService.getSchemaManager());
         partitionFactory.addIndex(systemPartition, SchemaConstants.OBJECT_CLASS_AT, 100);
+        systemPartition.setCacheService(directoryService.getCacheService());
         directoryService.setSystemPartition(systemPartition);
 
         directoryService.startup();
