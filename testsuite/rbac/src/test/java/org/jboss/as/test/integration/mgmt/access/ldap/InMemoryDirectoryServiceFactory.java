@@ -44,7 +44,7 @@ import org.apache.directory.api.ldap.model.schema.comparators.NormalizingCompara
 import org.apache.directory.api.ldap.model.schema.registries.ComparatorRegistry;
 import org.apache.directory.api.ldap.model.schema.registries.SchemaLoader;
 import org.apache.directory.api.ldap.schemaloader.JarLdifSchemaLoader;
-import org.apache.directory.api.ldap.schemamanager.impl.DefaultSchemaManager;
+import org.apache.directory.api.ldap.schema.extractor.impl.DefaultSchemaLdifExtractor;
 import org.apache.directory.api.ldap.util.tree.DnNode;
 import org.apache.directory.api.util.exception.Exceptions;
 import org.apache.directory.server.constants.ServerDNConstants;

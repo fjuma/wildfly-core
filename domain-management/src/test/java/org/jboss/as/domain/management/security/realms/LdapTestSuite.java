@@ -162,7 +162,7 @@ public class LdapTestSuite {
     private static void createPartition(final DirectoryServiceFactory dsf, final SchemaManager schemaManager, final String id,
             final String suffix, final DirectoryService directoryService, final File workingDir) throws Exception {
         PartitionFactory pf = dsf.getPartitionFactory();
-        Partition p = pf.createPartition(schemaManager, id, suffix, 1000, workingDir);
+        Partition p = pf.createPartition(schemaManager, directoryService.getDnFactory(), id, suffix, 1000, workingDir);
         pf.addIndex(p, "uid", 10);
         pf.addIndex(p, "departmentNumber", 10);
         pf.addIndex(p, "member", 10);

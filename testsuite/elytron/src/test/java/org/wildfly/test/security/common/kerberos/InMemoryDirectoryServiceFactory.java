@@ -43,18 +43,20 @@ import org.apache.directory.api.ldap.model.schema.SchemaManager;
 import org.apache.directory.api.ldap.model.schema.comparators.NormalizingComparator;
 import org.apache.directory.api.ldap.model.schema.registries.ComparatorRegistry;
 import org.apache.directory.api.ldap.model.schema.registries.SchemaLoader;
-import org.apache.directory.api.ldap.schemaloader.JarLdifSchemaLoader;
-import org.apache.directory.api.ldap.schemamanager.impl.DefaultSchemaManager;
+import org.apache.directory.api.ldap.schema.loader.JarLdifSchemaLoader;
+import org.apache.directory.api.ldap.schema.manager.impl.DefaultSchemaManager;
 import org.apache.directory.api.ldap.util.tree.DnNode;
 import org.apache.directory.api.util.exception.Exceptions;
 import org.apache.directory.server.constants.ServerDNConstants;
 import org.apache.directory.server.core.DefaultDirectoryService;
+import org.apache.directory.server.core.api.AttributeTypeProvider;
 import org.apache.directory.server.core.api.CacheService;
 import org.apache.directory.server.core.api.CoreSession;
 import org.apache.directory.server.core.api.DirectoryService;
 import org.apache.directory.server.core.api.DnFactory;
 import org.apache.directory.server.core.api.InstanceLayout;
 import org.apache.directory.server.core.api.LdapPrincipal;
+import org.apache.directory.server.core.api.ObjectClassProvider;
 import org.apache.directory.server.core.api.OperationEnum;
 import org.apache.directory.server.core.api.OperationManager;
 import org.apache.directory.server.core.api.ReferralManager;
@@ -170,7 +172,7 @@ public class InMemoryDirectoryServiceFactory implements DirectoryServiceFactory 
         }
 
         // Init system partition
-        Partition systemPartition = partitionFactory.createPartition(directoryService.getSchemaManager(), "system",
+        Partition systemPartition = partitionFactory.createPartition(directoryService.getSchemaManager(), directoryService.getDnFactory(), "system",
                 ServerDNConstants.SYSTEM_DN, 500, new File(directoryService.getInstanceLayout().getPartitionsDirectory(),
                         "system"));
         systemPartition.setSchemaManager(directoryService.getSchemaManager());
@@ -544,16 +546,6 @@ public class InMemoryDirectoryServiceFactory implements DirectoryServiceFactory 
         }
 
         @Override
-        public void setContextCsn(String lastCommittedCsnVal) {
-            wrapped.setContextCsn(lastCommittedCsnVal);
-        }
-
-        @Override
-        public String getContextCsn() {
-            return wrapped.getContextCsn();
-        }
-
-        @Override
         public void setSyncPeriodMillis(long syncPeriodMillis) {
             wrapped.setSyncPeriodMillis(syncPeriodMillis);
         }
@@ -601,6 +593,21 @@ public class InMemoryDirectoryServiceFactory implements DirectoryServiceFactory 
         @Override
         public void setCacheService(CacheService cacheService) {
             wrapped.setCacheService(cacheService);
+        }
+
+        @Override
+        public ObjectClassProvider getOcProvider() {
+            return wrapped.getOcProvider();
+        }
+
+        @Override
+        public AttributeTypeProvider getAtProvider() {
+            return wrapped.getAtProvider();
+        }
+
+        @Override
+        public void setDnFactory(DnFactory dnFactory) {
+            wrapped.setDnFactory(dnFactory);
         }
 
     }
