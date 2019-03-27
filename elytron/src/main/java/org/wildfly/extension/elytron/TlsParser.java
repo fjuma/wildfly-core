@@ -138,10 +138,51 @@ class TlsParser {
             .addAttribute(SSLDefinitions.FINAL_PRINCIPAL_TRANSFORMER)
             .addAttribute(SSLDefinitions.REALM_MAPPER);
 
+    private PersistentResourceXMLBuilder serverSslContextParser_7_0 = PersistentResourceXMLDescription.builder(PathElement.pathElement(SERVER_SSL_CONTEXT))
+            .setXmlWrapperElement(SERVER_SSL_CONTEXTS)
+            .setMarshallDefaultValues(true)
+            .addAttribute(SSLDefinitions.SECURITY_DOMAIN)
+            .addAttribute(SSLDefinitions.CIPHER_SUITE_FILTER)
+            .addAttribute(SSLDefinitions.CIPHER_SUITE_NAMES) // new
+            .addAttribute(SSLDefinitions.PROTOCOLS)
+            .addAttribute(SSLDefinitions.WANT_CLIENT_AUTH)
+            .addAttribute(SSLDefinitions.NEED_CLIENT_AUTH)
+            .addAttribute(SSLDefinitions.AUTHENTICATION_OPTIONAL)
+            .addAttribute(SSLDefinitions.USE_CIPHER_SUITES_ORDER)
+            .addAttribute(SSLDefinitions.MAXIMUM_SESSION_CACHE_SIZE)
+            .addAttribute(SSLDefinitions.SESSION_TIMEOUT)
+            .addAttribute(SSLDefinitions.WRAP)
+            .addAttribute(SSLDefinitions.KEY_MANAGER)
+            .addAttribute(SSLDefinitions.TRUST_MANAGER)
+            .addAttribute(SSLDefinitions.PROVIDERS)
+            .addAttribute(SSLDefinitions.PROVIDER_NAME)
+            .addAttribute(SSLDefinitions.PRE_REALM_PRINCIPAL_TRANSFORMER)
+            .addAttribute(SSLDefinitions.POST_REALM_PRINCIPAL_TRANSFORMER)
+            .addAttribute(SSLDefinitions.FINAL_PRINCIPAL_TRANSFORMER)
+            .addAttribute(SSLDefinitions.REALM_MAPPER);
+
     private PersistentResourceXMLBuilder clientSslContextParser = PersistentResourceXMLDescription.builder(PathElement.pathElement(CLIENT_SSL_CONTEXT))
             .setXmlWrapperElement(CLIENT_SSL_CONTEXTS)
             .addAttribute(SSLDefinitions.SECURITY_DOMAIN)
             .addAttribute(SSLDefinitions.CIPHER_SUITE_FILTER)
+            .addAttribute(SSLDefinitions.PROTOCOLS)
+            .addAttribute(SSLDefinitions.WANT_CLIENT_AUTH)
+            .addAttribute(SSLDefinitions.NEED_CLIENT_AUTH)
+            .addAttribute(SSLDefinitions.AUTHENTICATION_OPTIONAL)
+            .addAttribute(SSLDefinitions.USE_CIPHER_SUITES_ORDER)
+            .addAttribute(SSLDefinitions.MAXIMUM_SESSION_CACHE_SIZE)
+            .addAttribute(SSLDefinitions.SESSION_TIMEOUT)
+            .addAttribute(SSLDefinitions.WRAP)
+            .addAttribute(SSLDefinitions.KEY_MANAGER)
+            .addAttribute(SSLDefinitions.TRUST_MANAGER)
+            .addAttribute(SSLDefinitions.PROVIDERS)
+            .addAttribute(SSLDefinitions.PROVIDER_NAME);
+
+    private PersistentResourceXMLBuilder clientSslContextParser_7_0 = PersistentResourceXMLDescription.builder(PathElement.pathElement(CLIENT_SSL_CONTEXT))
+            .setXmlWrapperElement(CLIENT_SSL_CONTEXTS)
+            .addAttribute(SSLDefinitions.SECURITY_DOMAIN)
+            .addAttribute(SSLDefinitions.CIPHER_SUITE_FILTER)
+            .addAttribute(SSLDefinitions.CIPHER_SUITE_NAMES) // new
             .addAttribute(SSLDefinitions.PROTOCOLS)
             .addAttribute(SSLDefinitions.WANT_CLIENT_AUTH)
             .addAttribute(SSLDefinitions.NEED_CLIENT_AUTH)
@@ -215,9 +256,9 @@ class TlsParser {
 
     final PersistentResourceXMLDescription tlsParser_5_0 = decorator(TLS)
             .addChild(decorator(KEY_STORES)
-                .addChild(keyStoreParser)
-                .addChild(ldapKeyStoreParser)
-                .addChild(filteringKeyStoreParser)
+                    .addChild(keyStoreParser)
+                    .addChild(ldapKeyStoreParser)
+                    .addChild(filteringKeyStoreParser)
             )
             .addChild(keyManagerParser)
             .addChild(trustManagerParser)
@@ -225,6 +266,20 @@ class TlsParser {
             .addChild(clientSslContextParser)
             .addChild(certificateAuthorityAccountParser)
             .addChild(serverSslSniContextParser) // new
+            .build();
+
+    final PersistentResourceXMLDescription tlsParser_7_0 = decorator(TLS)
+            .addChild(decorator(KEY_STORES)
+                    .addChild(keyStoreParser)
+                    .addChild(ldapKeyStoreParser)
+                    .addChild(filteringKeyStoreParser)
+            )
+            .addChild(keyManagerParser)
+            .addChild(trustManagerParser)
+            .addChild(serverSslContextParser_7_0) // new cipher-suite-names attribute
+            .addChild(clientSslContextParser_7_0) // new cipher-suite-names attribute
+            .addChild(certificateAuthorityAccountParser)
+            .addChild(serverSslSniContextParser)
             .build();
 
 }

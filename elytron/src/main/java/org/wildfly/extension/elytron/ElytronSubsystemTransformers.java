@@ -86,6 +86,16 @@ public final class ElytronSubsystemTransformers implements ExtensionTransformerR
 
     private static void from7(ChainedTransformationDescriptionBuilder chainedBuilder) {
         ResourceTransformationDescriptionBuilder builder = chainedBuilder.createBuilder(ELYTRON_7_0_0, ELYTRON_6_0_0);
+        builder.addChildResource(PathElement.pathElement(ElytronDescriptionConstants.SERVER_SSL_CONTEXT))
+                .getAttributeBuilder()
+                .addRejectCheck(RejectAttributeChecker.DEFINED, ElytronDescriptionConstants.CIPHER_SUITE_NAMES)
+                .setDiscard(DiscardAttributeChecker.UNDEFINED, SSLDefinitions.CIPHER_SUITE_NAMES)
+                .end();
+        builder.addChildResource(PathElement.pathElement(ElytronDescriptionConstants.CLIENT_SSL_CONTEXT))
+                .getAttributeBuilder()
+                .addRejectCheck(RejectAttributeChecker.DEFINED, ElytronDescriptionConstants.CIPHER_SUITE_NAMES)
+                .setDiscard(DiscardAttributeChecker.UNDEFINED, SSLDefinitions.CIPHER_SUITE_NAMES)
+                .end();
 
     }
 

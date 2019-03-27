@@ -143,7 +143,7 @@
         <version.com.jcraft.jzlib>1.1.1</version.com.jcraft.jzlib>
         <version.commons-io>2.5</version.commons-io>
         <version.commons-lang>2.6</version.commons-lang>
-        <version.io.undertow>2.0.17.Final</version.io.undertow>
+        <version.io.undertow>2.0.18.Final-SNAPSHOT</version.io.undertow>
         <version.javax.inject.javax.inject>1</version.javax.inject.javax.inject>
         <version.javax.json.javax-json-api>1.1.2</version.javax.json.javax-json-api>
         <version.junit>4.12</version.junit>
@@ -215,7 +215,7 @@
         <version.org.wildfly.openssl.wildfly-openssl-solaris-x86_64>${version.org.wildfly.openssl.natives}</version.org.wildfly.openssl.wildfly-openssl-solaris-x86_64>
         <version.org.wildfly.openssl.wildfly-openssl-windows-i386>${version.org.wildfly.openssl.natives}</version.org.wildfly.openssl.wildfly-openssl-windows-i386>
         <version.org.wildfly.openssl.wildfly-openssl-windows-x86_64>${version.org.wildfly.openssl.natives}</version.org.wildfly.openssl.wildfly-openssl-windows-x86_64>
-        <version.org.wildfly.security.elytron>1.8.0.CR2</version.org.wildfly.security.elytron>
+        <version.org.wildfly.security.elytron>1.8.1.CR1-SNAPSHOT</version.org.wildfly.security.elytron>
         <version.org.wildfly.security.elytron-web>1.4.0.CR1</version.org.wildfly.security.elytron-web>
         <version.org.wildfly.security.elytron.tool>1.6.0.CR1</version.org.wildfly.security.elytron.tool>
         <version.xalan>2.7.1.jbossorg-2</version.xalan>
