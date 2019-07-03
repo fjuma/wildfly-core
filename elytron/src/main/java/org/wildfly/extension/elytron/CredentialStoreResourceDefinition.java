@@ -124,7 +124,10 @@ final class CredentialStoreResourceDefinition extends SimpleResourceDefinition {
             .setRestartAllServices()
             .build();
 
-    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE = CredentialReference.getAttributeDefinition(true);
+    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE = CredentialReference.getAttributeDefinition(true,
+            CredentialReference.Version.VERSION_1_0);
+
+    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE_8_0 = CredentialReference.getAttributeDefinition(true);
 
     static final SimpleAttributeDefinition TYPE = new SimpleAttributeDefinitionBuilder(ElytronDescriptionConstants.TYPE, ModelType.STRING, true)
             .setAttributeGroup(ElytronDescriptionConstants.IMPLEMENTATION)
@@ -331,7 +334,7 @@ final class CredentialStoreResourceDefinition extends SimpleResourceDefinition {
             }
 
             csService.getCredentialSourceSupplierInjector()
-                    .inject(CredentialReference.getCredentialSourceSupplier(context, CredentialStoreResourceDefinition.CREDENTIAL_REFERENCE, model, credentialStoreServiceBuilder));
+                    .inject(CredentialReference.getCredentialSourceSupplier(context, CredentialStoreResourceDefinition.CREDENTIAL_REFERENCE_8_0, model, credentialStoreServiceBuilder));
 
             commonDependencies(credentialStoreServiceBuilder).install();
         }

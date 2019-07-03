@@ -144,7 +144,12 @@ class AuthenticationClientDefinitions {
             .setRestartAllServices()
             .build();
 
-    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE = CredentialReference.getAttributeBuilder(true, true)
+    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE = CredentialReference.getAttributeBuilder(true, true,
+            CredentialReference.Version.VERSION_1_0)
+            .setRestartAllServices()
+            .build();
+
+    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE_8_0 = CredentialReference.getAttributeBuilder(true, true)
             .setRestartAllServices()
             .build();
 
@@ -158,7 +163,7 @@ class AuthenticationClientDefinitions {
             PORT, REALM, SECURITY_DOMAIN, FORWARDING_MODE, SASL_MECHANISM_SELECTOR, KERBEROS_SECURITY_FACTORY };
 
     static final AttributeDefinition[] AUTHENTICATION_CONFIGURATION_ALL_ATTRIBUTES = new AttributeDefinition[] { CONFIGURATION_EXTENDS, ANONYMOUS, AUTHENTICATION_NAME, AUTHORIZATION_NAME, HOST, PROTOCOL,
-            PORT, REALM, SECURITY_DOMAIN, FORWARDING_MODE, KERBEROS_SECURITY_FACTORY, SASL_MECHANISM_SELECTOR, MECHANISM_PROPERTIES, CREDENTIAL_REFERENCE };
+            PORT, REALM, SECURITY_DOMAIN, FORWARDING_MODE, KERBEROS_SECURITY_FACTORY, SASL_MECHANISM_SELECTOR, MECHANISM_PROPERTIES, CREDENTIAL_REFERENCE_8_0 };
 
     /* *************************************** */
     /* Authentication Context Attributes */
@@ -322,10 +327,10 @@ class AuthenticationClientDefinitions {
                     configuration = configuration.andThen(c -> c.useMechanismProperties(propertiesMap, parent == null));
                 }
 
-                ModelNode credentialReference = CREDENTIAL_REFERENCE.resolveModelAttribute(context, model);
+                ModelNode credentialReference = CREDENTIAL_REFERENCE_8_0.resolveModelAttribute(context, model);
                 if (credentialReference.isDefined()) {
                     final InjectedValue<ExceptionSupplier<CredentialSource, Exception>> credentialSourceSupplierInjector = new InjectedValue<>();
-                    credentialSourceSupplierInjector.inject(CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, model, serviceBuilder));
+                    credentialSourceSupplierInjector.inject(CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE_8_0, model, serviceBuilder));
                     configuration = configuration.andThen(c -> {
                         ExceptionSupplier<CredentialSource, Exception> sourceSupplier = credentialSourceSupplierInjector
                                 .getValue();

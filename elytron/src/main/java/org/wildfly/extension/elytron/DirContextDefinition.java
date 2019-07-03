@@ -92,6 +92,11 @@ class DirContextDefinition extends SimpleResourceDefinition {
             .build();
 
     static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE =
+            CredentialReference.getAttributeBuilder(true, true, CredentialReference.Version.VERSION_1_0)
+                    .setAlternatives(ElytronDescriptionConstants.AUTHENTICATION_CONTEXT)
+                    .build();
+
+    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE_8_0 =
             CredentialReference.getAttributeBuilder(true, true)
                     .setAlternatives(ElytronDescriptionConstants.AUTHENTICATION_CONTEXT)
                     .build();
@@ -140,6 +145,7 @@ class DirContextDefinition extends SimpleResourceDefinition {
             .build();
 
     static final AttributeDefinition[] ATTRIBUTES = new AttributeDefinition[] {URL, AUTHENTICATION_LEVEL, PRINCIPAL, CREDENTIAL_REFERENCE, ENABLE_CONNECTION_POOLING, REFERRAL_MODE, AUTHENTICATION_CONTEXT, SSL_CONTEXT, CONNECTION_TIMEOUT, READ_TIMEOUT, PROPERTIES, MODULE};
+    static final AttributeDefinition[] ATTRIBUTES_8_0 = new AttributeDefinition[] {URL, AUTHENTICATION_LEVEL, PRINCIPAL, CREDENTIAL_REFERENCE_8_0, ENABLE_CONNECTION_POOLING, REFERRAL_MODE, AUTHENTICATION_CONTEXT, SSL_CONTEXT, CONNECTION_TIMEOUT, READ_TIMEOUT, PROPERTIES, MODULE};
 
     DirContextDefinition() {
         super(new SimpleResourceDefinition.Parameters(PathElement.pathElement(ElytronDescriptionConstants.DIR_CONTEXT), ElytronExtension.getResourceDescriptionResolver(ElytronDescriptionConstants.DIR_CONTEXT))
@@ -152,8 +158,8 @@ class DirContextDefinition extends SimpleResourceDefinition {
 
     @Override
     public void registerAttributes(ManagementResourceRegistration resourceRegistration) {
-        AbstractWriteAttributeHandler handler = new ElytronReloadRequiredWriteAttributeHandler(ATTRIBUTES);
-        for (AttributeDefinition current : ATTRIBUTES) {
+        AbstractWriteAttributeHandler handler = new ElytronReloadRequiredWriteAttributeHandler(ATTRIBUTES_8_0);
+        for (AttributeDefinition current : ATTRIBUTES_8_0) {
             resourceRegistration.registerReadWriteAttribute(current, null, handler);
         }
     }
@@ -226,7 +232,7 @@ class DirContextDefinition extends SimpleResourceDefinition {
         };
     }
 
-    private static final AbstractAddStepHandler ADD = new BaseAddHandler(DIR_CONTEXT_RUNTIME_CAPABILITY, ATTRIBUTES) {
+    private static final AbstractAddStepHandler ADD = new BaseAddHandler(DIR_CONTEXT_RUNTIME_CAPABILITY, ATTRIBUTES_8_0) {
         protected void performRuntime(final OperationContext context, final ModelNode operation, final ModelNode model) throws OperationFailedException {
 
             RuntimeCapability<Void> runtimeCapability = DIR_CONTEXT_RUNTIME_CAPABILITY.fromBaseCapability(context.getCurrentAddressValue());
@@ -246,8 +252,8 @@ class DirContextDefinition extends SimpleResourceDefinition {
                 serviceBuilder.addDependency(sslServiceName, SSLContext.class, sslContextInjector);
             }
 
-            if (CREDENTIAL_REFERENCE.resolveModelAttribute(context, model).isDefined()) {
-                credentialSourceSupplierInjector.inject(CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, model, serviceBuilder));
+            if (CREDENTIAL_REFERENCE_8_0.resolveModelAttribute(context, model).isDefined()) {
+                credentialSourceSupplierInjector.inject(CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE_8_0, model, serviceBuilder));
             }
 
             String authenticationContextName = AUTHENTICATION_CONTEXT.resolveModelAttribute(context, model).asStringOrNull();

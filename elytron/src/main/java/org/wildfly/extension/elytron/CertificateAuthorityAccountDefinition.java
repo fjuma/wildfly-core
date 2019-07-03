@@ -108,11 +108,16 @@ class CertificateAuthorityAccountDefinition extends SimpleResourceDefinition {
             .setRestartAllServices()
             .build();
 
-    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE = CredentialReference.getAttributeBuilder(true, true)
+    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE = CredentialReference.getAttributeBuilder(true, true,
+            CredentialReference.Version.VERSION_1_0)
             .setAttributeGroup(ElytronDescriptionConstants.ACCOUNT_KEY)
             .build();
 
-    private static final AttributeDefinition[] ATTRIBUTES = new AttributeDefinition[] { CERTIFICATE_AUTHORITY, CONTACT_URLS, KEY_STORE, ALIAS, CREDENTIAL_REFERENCE };
+    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE_8_0 = CredentialReference.getAttributeBuilder(true, true)
+            .setAttributeGroup(ElytronDescriptionConstants.ACCOUNT_KEY)
+            .build();
+
+    private static final AttributeDefinition[] ATTRIBUTES = new AttributeDefinition[] { CERTIFICATE_AUTHORITY, CONTACT_URLS, KEY_STORE, ALIAS, CREDENTIAL_REFERENCE_8_0 };
 
     static final SimpleAttributeDefinition AGREE_TO_TERMS_OF_SERVICE = new SimpleAttributeDefinitionBuilder(ElytronDescriptionConstants.AGREE_TO_TERMS_OF_SERVICE, ModelType.BOOLEAN, false)
             .setAllowExpression(true)
@@ -177,8 +182,8 @@ class CertificateAuthorityAccountDefinition extends SimpleResourceDefinition {
             final String alias = ALIAS.resolveModelAttribute(context, model).asString();
             final String keyStoreName = KEY_STORE.resolveModelAttribute(context, model).asString();
             ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier = null;
-            if (CREDENTIAL_REFERENCE.resolveModelAttribute(context, operation).isDefined()) {
-                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, operation, null);
+            if (CREDENTIAL_REFERENCE_8_0.resolveModelAttribute(context, operation).isDefined()) {
+                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE_8_0, operation, null);
             }
             final List<ModelNode> contactUrls = CONTACT_URLS.resolveModelAttribute(context, model).asListOrEmpty();
             final List<String> contactUrlsList = new ArrayList<>(contactUrls.size());

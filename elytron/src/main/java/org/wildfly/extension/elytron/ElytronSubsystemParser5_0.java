@@ -67,7 +67,7 @@ public class ElytronSubsystemParser5_0 extends ElytronSubsystemParser4_0 {
                 .addChild(getHttpParser())
                 .addChild(getSaslParser())
                 .addChild(getTlsParser())
-                .addChild(decorator(CREDENTIAL_STORES).addChild(new CredentialStoreParser().parser))
+                .addChild(decorator(CREDENTIAL_STORES).addChild(getCredentialStoreParser()))
                 .addChild(getDirContextParser())
                 .addChild(getPolicyParser())
                 .addChild(jaspiConfigurationParser) // new
@@ -82,6 +82,10 @@ public class ElytronSubsystemParser5_0 extends ElytronSubsystemParser4_0 {
     @Override
     PersistentResourceXMLDescription getTlsParser() {
         return new TlsParser().tlsParser_5_0;
+    }
+
+    PersistentResourceXMLDescription getCredentialStoreParser() {
+        return new CredentialStoreParser().parser;
     }
 
 }
