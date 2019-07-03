@@ -63,6 +63,11 @@ import org.wildfly.security.util.PasswordBasedEncryptionUtil;
  */
 public final class CredentialReference {
 
+    public enum Version {
+        VERSION_1_0, // clear-text and store mutually exclusive
+        CURRENT // both clear-text and store allowed
+    }
+
     /**
      * Capability required by a credential-reference attribute if its {@code store} field is configured.
      */
@@ -89,24 +94,47 @@ public final class CredentialReference {
     public static final String CLEAR_TEXT = "clear-text";
 
     private static final SimpleAttributeDefinition credentialStoreAttribute;
+    private static final SimpleAttributeDefinition credentialStoreAttribute_1_0;
     private static final SimpleAttributeDefinition credentialAliasAttribute;
     private static final SimpleAttributeDefinition credentialTypeAttribute;
     private static final SimpleAttributeDefinition clearTextAttribute;
+    private static final SimpleAttributeDefinition clearTextAttribute_1_0;
 
     /** A variant that has a default capability reference configured for the attribute */
+    private static final SimpleAttributeDefinition credentialStoreAttributeWithCapabilityReference_1_0;
     private static final SimpleAttributeDefinition credentialStoreAttributeWithCapabilityReference;
 
+    private static final ObjectTypeAttributeDefinition credentialReferenceAD_1_0;
     private static final ObjectTypeAttributeDefinition credentialReferenceAD;
 
     /** Uses credentialStoreAttributeWithCapabilityReference */
+    private static final ObjectTypeAttributeDefinition credentialReferenceADWithCapabilityReference_1_0;
     private static final ObjectTypeAttributeDefinition credentialReferenceADWithCapabilityReference;
 
     static {
-        credentialStoreAttribute = new SimpleAttributeDefinitionBuilder(STORE, ModelType.STRING, true)
+        // clear-text and store mutually exclusive
+        credentialStoreAttribute_1_0 = new SimpleAttributeDefinitionBuilder(STORE, ModelType.STRING, true)
                 .setXmlName(STORE)
                 .setRequires(ALIAS)
                 .setAlternatives(CLEAR_TEXT)
                 .build();
+
+        clearTextAttribute_1_0 = new SimpleAttributeDefinitionBuilder(CLEAR_TEXT, ModelType.STRING, true)
+                .setXmlName(CLEAR_TEXT)
+                .setAllowExpression(true)
+                .setAlternatives(STORE)
+                .build();
+
+        // both clear-text and store allowed
+        credentialStoreAttribute = new SimpleAttributeDefinitionBuilder(STORE, ModelType.STRING, true)
+                .setXmlName(STORE)
+                .build();
+
+        clearTextAttribute = new SimpleAttributeDefinitionBuilder(CLEAR_TEXT, ModelType.STRING, true)
+                .setXmlName(CLEAR_TEXT)
+                .setAllowExpression(true)
+                .build();
+
         credentialAliasAttribute = new SimpleAttributeDefinitionBuilder(ALIAS, ModelType.STRING, true)
                 .setXmlName(ALIAS)
                 .setAllowExpression(true)
@@ -116,19 +144,24 @@ public final class CredentialReference {
                 .setXmlName(TYPE)
                 .setAllowExpression(true)
                 .build();
-        clearTextAttribute = new SimpleAttributeDefinitionBuilder(CLEAR_TEXT, ModelType.STRING, true)
-                .setXmlName(CLEAR_TEXT)
-                .setAllowExpression(true)
-                .setAlternatives(STORE)
+
+        credentialReferenceAD_1_0 = getAttributeBuilder(CREDENTIAL_REFERENCE, CREDENTIAL_REFERENCE, false, false, Version.VERSION_1_0)
+                .setRestartAllServices()
                 .build();
         credentialReferenceAD = getAttributeBuilder(CREDENTIAL_REFERENCE, CREDENTIAL_REFERENCE, false, false)
                 .setRestartAllServices()
                 .build();
 
+        credentialStoreAttributeWithCapabilityReference_1_0 = new SimpleAttributeDefinitionBuilder(credentialStoreAttribute_1_0)
+                .setCapabilityReference(CREDENTIAL_STORE_CAPABILITY)
+                .build();
         credentialStoreAttributeWithCapabilityReference = new SimpleAttributeDefinitionBuilder(credentialStoreAttribute)
                 .setCapabilityReference(CREDENTIAL_STORE_CAPABILITY)
                 .build();
 
+        credentialReferenceADWithCapabilityReference_1_0 = getAttributeBuilder(CREDENTIAL_REFERENCE, CREDENTIAL_REFERENCE, false, true, Version.VERSION_1_0)
+                .setRestartAllServices()
+                .build();
         credentialReferenceADWithCapabilityReference = getAttributeBuilder(CREDENTIAL_REFERENCE, CREDENTIAL_REFERENCE, false, true)
                 .setRestartAllServices()
                 .build();
@@ -147,8 +180,25 @@ public final class CredentialReference {
      *
      */
     public static ObjectTypeAttributeDefinition getAttributeDefinition() {
-        return credentialReferenceAD;
+        return getAttributeDefinition(Version.CURRENT);
     }
+
+    /**
+     * Returns a definition for a credential reference attribute. The {@code store} field in the
+     * attribute does not register any requirement for a credential store capability.
+     *
+     * @param version the schema version to use
+     * @return credential reference attribute definition
+     *
+     */
+    public static ObjectTypeAttributeDefinition getAttributeDefinition(Version version) {
+        if (version.equals(Version.VERSION_1_0)) {
+            return credentialReferenceAD_1_0;
+        } else {
+            return credentialReferenceAD;
+        }
+    }
+
 
     /**
      * Returns a definition for a credential reference attribute, one that optionally
@@ -164,10 +214,34 @@ public final class CredentialReference {
      * @return credential reference attribute definition
      */
     public static ObjectTypeAttributeDefinition getAttributeDefinition(boolean referenceCredentialStore) {
-        return referenceCredentialStore
-                ? credentialReferenceADWithCapabilityReference
-                : credentialReferenceAD;
+        return getAttributeDefinition(referenceCredentialStore, Version.CURRENT);
     }
+
+    /**
+     * Returns a definition for a credential reference attribute, one that optionally
+     * {@link org.jboss.as.controller.AbstractAttributeDefinitionBuilder#setCapabilityReference(String) registers a requirement}
+     * for a {@link #CREDENTIAL_STORE_CAPABILITY credential store capability}.
+     * If a requirement is registered, the dependent capability will be the single capability registered by the
+     * resource that uses this attribute definition. The resource must expose one and only one capability in order
+     * to use this facility.
+     *
+     * @param referenceCredentialStore {@code true} if the {@code store} field in the
+     *                                 attribute should register a requirement for a credential store capability.
+     * @param version the schema version to use
+     * @return credential reference attribute definition
+     */
+    public static ObjectTypeAttributeDefinition getAttributeDefinition(boolean referenceCredentialStore, Version version) {
+        if (version.equals(Version.VERSION_1_0)) {
+            return referenceCredentialStore
+                    ? credentialReferenceADWithCapabilityReference_1_0
+                    : credentialReferenceAD_1_0;
+        } else {
+            return referenceCredentialStore
+                    ? credentialReferenceADWithCapabilityReference
+                    : credentialReferenceAD;
+        }
+    }
+
 
     /**
      * Gets an attribute builder for a credential-reference attribute with the standard {@code credential-reference}
@@ -184,8 +258,32 @@ public final class CredentialReference {
      * @return an {@link ObjectTypeAttributeDefinition.Builder} which can be used to build an attribute definition
      */
     public static ObjectTypeAttributeDefinition.Builder getAttributeBuilder(boolean allowNull, boolean referenceCredentialStore) {
-        AttributeDefinition csAttr = referenceCredentialStore ? credentialStoreAttributeWithCapabilityReference : credentialStoreAttribute;
-        return getAttributeBuilder(CREDENTIAL_REFERENCE, CREDENTIAL_REFERENCE, allowNull, csAttr);
+        return getAttributeBuilder(allowNull, referenceCredentialStore, Version.CURRENT);
+    }
+
+    /**
+     * Gets an attribute builder for a credential-reference attribute with the standard {@code credential-reference}
+     * attribute name, a configurable setting as to whether the attribute is required, and optionally configured to
+     * {@link org.jboss.as.controller.AbstractAttributeDefinitionBuilder#setCapabilityReference(String) register a requirement}
+     * for a {@link #CREDENTIAL_STORE_CAPABILITY credential store capability}.
+     * If a requirement is registered, the dependent capability will be the single capability registered by the
+     * resource that uses this attribute definition. The resource must expose one and only one capability in order
+     * to use this facility.
+     *
+     * @param allowNull whether the attribute is required
+     * @param referenceCredentialStore {@code true} if the {@code store} field in the
+     *                                 attribute should register a requirement for a credential store capability.
+     * @param version the schema version to use
+     * @return an {@link ObjectTypeAttributeDefinition.Builder} which can be used to build an attribute definition
+     */
+    public static ObjectTypeAttributeDefinition.Builder getAttributeBuilder(boolean allowNull, boolean referenceCredentialStore, Version version) {
+        AttributeDefinition csAttr;
+        if (version.equals(Version.VERSION_1_0)) {
+            csAttr = referenceCredentialStore ? credentialStoreAttributeWithCapabilityReference_1_0 : credentialStoreAttribute_1_0;
+        } else {
+            csAttr = referenceCredentialStore ? credentialStoreAttributeWithCapabilityReference : credentialStoreAttribute;
+        }
+        return getAttributeBuilder(CREDENTIAL_REFERENCE, CREDENTIAL_REFERENCE, allowNull, csAttr, version);
     }
 
     /**
@@ -198,7 +296,21 @@ public final class CredentialReference {
      * @return an {@link ObjectTypeAttributeDefinition.Builder} which can be used to build an attribute definition
      */
     public static ObjectTypeAttributeDefinition.Builder getAttributeBuilder(String name, String xmlName, boolean allowNull) {
-        return getAttributeBuilder(name, xmlName, allowNull, false);
+        return getAttributeBuilder(name, xmlName, allowNull, false, Version.CURRENT);
+    }
+
+    /**
+     * Get an attribute builder for a credential-reference attribute with the specified characteristics. The
+     * {@code store} field in the attribute does not register any requirement for a credential store capability.
+     *
+     * @param name name of attribute
+     * @param xmlName name of xml element
+     * @param allowNull {@code false} if the attribute is required
+     * @param version the schema version to use
+     * @return an {@link ObjectTypeAttributeDefinition.Builder} which can be used to build an attribute definition
+     */
+    public static ObjectTypeAttributeDefinition.Builder getAttributeBuilder(String name, String xmlName, boolean allowNull, Version version) {
+        return getAttributeBuilder(name, xmlName, allowNull, false, version);
     }
 
     /**
@@ -218,8 +330,34 @@ public final class CredentialReference {
      */
     public static ObjectTypeAttributeDefinition.Builder getAttributeBuilder(String name, String xmlName,
                                                                             boolean allowNull, boolean referenceCredentialStore) {
-        AttributeDefinition csAttr = referenceCredentialStore ? credentialStoreAttributeWithCapabilityReference : credentialStoreAttribute;
-        return getAttributeBuilder(name, xmlName, allowNull, csAttr);
+        return getAttributeBuilder(name, xmlName, allowNull, referenceCredentialStore, Version.CURRENT);
+    }
+
+    /**
+     * Get an attribute builder for a credential-reference attribute with the specified characteristics, optionally configured to
+     * {@link org.jboss.as.controller.AbstractAttributeDefinitionBuilder#setCapabilityReference(String) register a requirement}
+     * for a {@link #CREDENTIAL_STORE_CAPABILITY credential store capability}.
+     * If a requirement is registered, the dependent capability will be the single capability registered by the
+     * resource that uses this attribute definition. The resource must expose one and only one capability in order
+     * to use this facility.
+     *
+     * @param name name of attribute
+     * @param xmlName name of xml element
+     * @param allowNull {@code false} if the attribute is required
+     * @param referenceCredentialStore {@code true} if the {@code store} field in the
+     *                                 attribute should register a requirement for a credential store capability.
+     * @param version the schema version to use
+     * @return an {@link ObjectTypeAttributeDefinition.Builder} which can be used to build an attribute definition
+     */
+    public static ObjectTypeAttributeDefinition.Builder getAttributeBuilder(String name, String xmlName,
+                                                                            boolean allowNull, boolean referenceCredentialStore, Version version) {
+        AttributeDefinition csAttr;
+        if (version.equals(Version.VERSION_1_0)) {
+            csAttr = referenceCredentialStore ? credentialStoreAttributeWithCapabilityReference_1_0 : credentialStoreAttribute_1_0;
+        } else {
+            csAttr = referenceCredentialStore ? credentialStoreAttributeWithCapabilityReference : credentialStoreAttribute;
+        }
+        return getAttributeBuilder(name, xmlName, allowNull, csAttr, version);
     }
 
     /**
@@ -242,19 +380,48 @@ public final class CredentialReference {
      */
     public static ObjectTypeAttributeDefinition.Builder getAttributeBuilder(String name, String xmlName, boolean allowNull,
                                                                             CapabilityReferenceRecorder capabilityStoreReferenceRecorder) {
+        return getAttributeBuilder(name, xmlName, allowNull, capabilityStoreReferenceRecorder, Version.CURRENT);
+    }
+
+    /**
+     * Get an attribute builder for a credential-reference attribute with the specified characteristics, optionally configured to
+     * {@link org.jboss.as.controller.AbstractAttributeDefinitionBuilder#setCapabilityReference(CapabilityReferenceRecorder)} register a requirement}
+     * for a {@link #CREDENTIAL_STORE_CAPABILITY credential store capability}.
+     *
+     * @param name name of attribute
+     * @param xmlName name of xml element
+     * @param allowNull {@code false} if the attribute is required
+     * @param capabilityStoreReferenceRecorder a capability reference recorder that can record a requirement
+     *                                         for the credential store referenced by the {@code store}
+     *                                         field of the returned attribute definition. Can be {@code null},
+     *                                         in which case no requirement would be recorded. If not {@code null}
+     *                                         the recorder's
+     *                                         {@link CapabilityReferenceRecorder#getBaseRequirementName() base requirement name}
+     *                                         must equal {@link #CREDENTIAL_STORE_CAPABILITY}
+     *
+     * @return an {@link ObjectTypeAttributeDefinition.Builder} which can be used to build attribute definition
+     */
+    public static ObjectTypeAttributeDefinition.Builder getAttributeBuilder(String name, String xmlName, boolean allowNull,
+                                                                            CapabilityReferenceRecorder capabilityStoreReferenceRecorder, Version version) {
         if (capabilityStoreReferenceRecorder == null) {
-            return getAttributeBuilder(name, xmlName, allowNull, false);
+            return getAttributeBuilder(name, xmlName, allowNull, false, version);
         }
 
         assert CREDENTIAL_STORE_CAPABILITY.equals(capabilityStoreReferenceRecorder.getBaseRequirementName());
-        AttributeDefinition csAttr = new SimpleAttributeDefinitionBuilder(credentialStoreAttribute)
+        AttributeDefinition csAttr = new SimpleAttributeDefinitionBuilder(version == Version.VERSION_1_0 ? credentialStoreAttribute_1_0 : credentialStoreAttribute)
                 .setCapabilityReference(capabilityStoreReferenceRecorder)
                 .build();
-        return getAttributeBuilder(name, xmlName, allowNull, csAttr);
+        return getAttributeBuilder(name, xmlName, allowNull, csAttr, version);
     }
 
+
     private static ObjectTypeAttributeDefinition.Builder getAttributeBuilder(String name, String xmlName, boolean allowNull, AttributeDefinition credentialStoreDefinition) {
-        return new ObjectTypeAttributeDefinition.Builder(name, credentialStoreDefinition, credentialAliasAttribute, credentialTypeAttribute, clearTextAttribute)
+        return getAttributeBuilder(name, xmlName, allowNull, credentialStoreDefinition, Version.CURRENT);
+    }
+
+    private static ObjectTypeAttributeDefinition.Builder getAttributeBuilder(String name, String xmlName, boolean allowNull, AttributeDefinition credentialStoreDefinition, Version version) {
+        return new ObjectTypeAttributeDefinition.Builder(name, credentialStoreDefinition, credentialAliasAttribute, credentialTypeAttribute,
+                version == Version.VERSION_1_0 ? clearTextAttribute_1_0 : clearTextAttribute)
                 .setXmlName(xmlName)
                 .setAttributeMarshaller(AttributeMarshaller.ATTRIBUTE_OBJECT)
                 .setAttributeParser(AttributeParser.OBJECT_PARSER)
