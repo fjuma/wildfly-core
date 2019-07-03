@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2017, Red Hat Middleware LLC, and individual contributors
+ * Copyright 2019, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -18,57 +18,41 @@
  * License along with this software; if not, write to the Free
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
- *
  */
-
-package org.wildfly.extension.elytron;
+package org.jboss.as.controller.security;
 
 import static org.jboss.as.controller.security.CredentialReference.applyCredentialReferenceUpdateToRuntime;
 import static org.jboss.as.controller.security.CredentialReference.handleCredentialReferenceUpdate;
-
-import java.util.Collection;
 
 import org.jboss.as.controller.AttributeDefinition;
 import org.jboss.as.controller.OperationContext;
 import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.ReloadRequiredWriteAttributeHandler;
 import org.jboss.as.controller.registry.Resource;
-import org.jboss.as.controller.security.CredentialReference;
 import org.jboss.dmr.ModelNode;
 
-/**
- * @author <a href="mailto:thofman@redhat.com">Tomas Hofman</a>
- */
-class ElytronReloadRequiredWriteAttributeHandler extends ReloadRequiredWriteAttributeHandler implements ElytronOperationStepHandler {
-    ElytronReloadRequiredWriteAttributeHandler(final AttributeDefinition... definitions) {
-        super(definitions);
+public class CredentialReferenceWriteAttributeHandler extends ReloadRequiredWriteAttributeHandler {
+
+    public CredentialReferenceWriteAttributeHandler(AttributeDefinition... attributes) {
+        super(attributes);
     }
 
-    ElytronReloadRequiredWriteAttributeHandler(final Collection<AttributeDefinition> definitions) {
-        super(definitions);
+    public CredentialReferenceWriteAttributeHandler(AttributeDefinition attribute) {
+        super(attribute);
     }
 
     @Override
     protected void finishModelStage(OperationContext context, ModelNode operation, String attributeName, ModelNode newValue,
                                     ModelNode oldValue, Resource resource) throws OperationFailedException {
         super.finishModelStage(context, operation, attributeName, newValue, oldValue, resource);
-        if (attributeName.equals(CredentialReference.CREDENTIAL_REFERENCE)) {
-            handleCredentialReferenceUpdate(context, resource.getModel().get(attributeName), attributeName);
-        }
+        handleCredentialReferenceUpdate(context, resource.getModel().get(attributeName), attributeName);
     }
+
 
     @Override
     protected boolean applyUpdateToRuntime(OperationContext context, ModelNode operation, String attributeName, ModelNode resolvedValue,
                                            ModelNode currentValue, HandbackHolder<Void> handbackHolder) throws OperationFailedException {
-        boolean requiresReload = false;
-        if (attributeName.equals(CredentialReference.CREDENTIAL_REFERENCE)) {
-            requiresReload = applyCredentialReferenceUpdateToRuntime(context, operation, resolvedValue, currentValue);
-        }
-        return super.applyUpdateToRuntime(context, operation, attributeName, resolvedValue, currentValue, handbackHolder) || requiresReload;
+        return applyCredentialReferenceUpdateToRuntime(context, operation, resolvedValue, currentValue);
     }
 
-    @Override
-    protected boolean requiresRuntime(final OperationContext context) {
-        return isServerOrHostController(context);
-    }
 }

@@ -22,6 +22,8 @@
 
 package org.jboss.as.domain.management.security;
 
+import static org.jboss.as.controller.security.CredentialReference.handleCredentialReferenceUpdate;
+
 import org.jboss.as.controller.AbstractAddStepHandler;
 import org.jboss.as.controller.OperationContext;
 import org.jboss.as.controller.OperationFailedException;
@@ -39,6 +41,12 @@ public class UserAddHandler extends AbstractAddStepHandler {
 
     private UserAddHandler() {
         super(UserResourceDefinition.PASSWORD, UserResourceDefinition.CREDENTIAL_REFERENCE);
+    }
+
+    @Override
+    protected void populateModel(final OperationContext context, final ModelNode operation, final Resource resource) throws  OperationFailedException {
+        super.populateModel(context, operation, resource);
+        handleCredentialReferenceUpdate(context, resource.getModel());
     }
 
     @Override

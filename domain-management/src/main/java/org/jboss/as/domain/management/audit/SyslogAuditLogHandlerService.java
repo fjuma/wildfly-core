@@ -15,10 +15,12 @@
  */
 package org.jboss.as.domain.management.audit;
 
+import static org.jboss.as.controller.audit.SyslogAuditLogHandler.Transport.TLS;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.AUTHENTICATION;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.CLIENT_CERT_STORE;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.PROTOCOL;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.TRUSTSTORE;
+import static org.jboss.as.controller.security.CredentialReference.KEY_DELIMITER;
 
 import java.util.Locale;
 import java.util.Set;
@@ -27,6 +29,7 @@ import org.jboss.as.controller.OperationContext;
 import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.audit.SyslogAuditLogHandler;
 import org.jboss.as.controller.audit.SyslogCredentialReferenceSupplier;
+import org.jboss.as.controller.descriptions.ModelDescriptionConstants;
 import org.jboss.as.controller.registry.Resource;
 import org.jboss.as.controller.registry.Resource.ResourceEntry;
 import org.jboss.as.controller.security.CredentialReference;
@@ -97,21 +100,24 @@ public class SyslogAuditLogHandlerService implements Service, SyslogCredentialRe
         ExceptionSupplier<CredentialSource, Exception> tccskcsSupplier = null;
         ExceptionSupplier<CredentialSource, Exception> tccscsSupplier = null;
         ExceptionSupplier<CredentialSource, Exception> ttsSupplier = null;
-        if (transport == SyslogAuditLogHandler.Transport.TLS) {
+        if (transport == TLS) {
             final Set<ResourceEntry> tlsStores = protocol.getChildren(AUTHENTICATION);
             for (ResourceEntry storeEntry : tlsStores) {
                 final ModelNode storeModel = storeEntry.getModel();
+                final String credentialReferenceParentName = serviceName.getSimpleName() + "." + storeEntry.getName();
                 String type = storeEntry.getPathElement().getValue();
                 if (type.equals(CLIENT_CERT_STORE)) {
+                    String keySuffix = PROTOCOL + KEY_DELIMITER + ModelDescriptionConstants.TLS + KEY_DELIMITER + AUTHENTICATION + KEY_DELIMITER + CLIENT_CERT_STORE;
                     if (storeModel.hasDefined(TlsKeyStore.KEY_PASSWORD_CREDENTIAL_REFERENCE.getName())) {
-                        tccskcsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEY_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder);
+                        tccskcsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEY_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder, keySuffix);
                     }
                     if (storeModel.hasDefined(TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE.getName())) {
-                        tccscsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder);
+                        tccscsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder, keySuffix);
                     }
                 } else if (type.equals(TRUSTSTORE)) {
+                    String keySuffix = PROTOCOL + KEY_DELIMITER + ModelDescriptionConstants.TLS + KEY_DELIMITER + AUTHENTICATION + KEY_DELIMITER + TRUSTSTORE;
                     if (storeModel.hasDefined(TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE.getName())) {
-                        ttsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder);
+                        ttsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder, keySuffix);
                     }
                 }
             }

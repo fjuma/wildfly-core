@@ -18,6 +18,7 @@
 
 package org.wildfly.extension.elytron;
 
+import static org.jboss.as.controller.security.CredentialReference.handleCredentialReferenceUpdate;
 import static org.wildfly.extension.elytron.AdvancedModifiableKeyStoreDecorator.resetAcmeAccount;
 import static org.wildfly.extension.elytron.Capabilities.CERTIFICATE_AUTHORITY_ACCOUNT_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.CERTIFICATE_AUTHORITY_ACCOUNT_RUNTIME_CAPABILITY;
@@ -112,7 +113,7 @@ class CertificateAuthorityAccountDefinition extends SimpleResourceDefinition {
             .setAttributeGroup(ElytronDescriptionConstants.ACCOUNT_KEY)
             .build();
 
-    private static final AttributeDefinition[] ATTRIBUTES = new AttributeDefinition[] { CERTIFICATE_AUTHORITY, CONTACT_URLS, KEY_STORE, ALIAS, CREDENTIAL_REFERENCE };
+    private static final AttributeDefinition[] ATTRIBUTES = new AttributeDefinition[] { CERTIFICATE_AUTHORITY, CONTACT_URLS, KEY_STORE, ALIAS, CREDENTIAL_REFERENCE};
 
     static final SimpleAttributeDefinition AGREE_TO_TERMS_OF_SERVICE = new SimpleAttributeDefinitionBuilder(ElytronDescriptionConstants.AGREE_TO_TERMS_OF_SERVICE, ModelType.BOOLEAN, false)
             .setAllowExpression(true)
@@ -168,6 +169,12 @@ class CertificateAuthorityAccountDefinition extends SimpleResourceDefinition {
 
         private CertificateAuthorityAccountAddHandler() {
             super(CERTIFICATE_AUTHORITY_ACCOUNT_RUNTIME_CAPABILITY, ATTRIBUTES);
+        }
+
+        @Override
+        protected void populateModel(final OperationContext context, final ModelNode operation, final Resource resource) throws  OperationFailedException {
+            super.populateModel(context, operation, resource);
+            handleCredentialReferenceUpdate(context, resource.getModel());
         }
 
         @Override

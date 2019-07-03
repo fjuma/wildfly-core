@@ -50,15 +50,15 @@ final class TrivialResourceDefinition extends SimpleResourceDefinition {
     private final List<ResourceDefinition> children;
 
     private TrivialResourceDefinition(String pathKey, ResourceDescriptionResolver resourceDescriptionResolver, AbstractAddStepHandler add, AbstractRemoveStepHandler remove, AttributeDefinition[] attributes,
-            Map<AttributeDefinition, OperationStepHandler> readOnlyAttributes, Map<OperationDefinition, OperationStepHandler> operations, List<ResourceDefinition> children,
-            RuntimeCapability<?>[] runtimeCapabilities) {
+                                      Map<AttributeDefinition, OperationStepHandler> readOnlyAttributes, Map<OperationDefinition, OperationStepHandler> operations, List<ResourceDefinition> children,
+                                      RuntimeCapability<?>[] runtimeCapabilities) {
         super(new Parameters(PathElement.pathElement(pathKey),
                 resourceDescriptionResolver)
-            .setAddHandler(add)
-            .setRemoveHandler(remove)
-            .setAddRestartLevel(OperationEntry.Flag.RESTART_RESOURCE_SERVICES)
-            .setRemoveRestartLevel(OperationEntry.Flag.RESTART_RESOURCE_SERVICES)
-            .setCapabilities(runtimeCapabilities));
+                .setAddHandler(add)
+                .setRemoveHandler(remove)
+                .setAddRestartLevel(OperationEntry.Flag.RESTART_RESOURCE_SERVICES)
+                .setRemoveRestartLevel(OperationEntry.Flag.RESTART_RESOURCE_SERVICES)
+                .setCapabilities(runtimeCapabilities));
 
         this.attributes = attributes;
         this.readOnlyAttributes = readOnlyAttributes;
@@ -76,18 +76,18 @@ final class TrivialResourceDefinition extends SimpleResourceDefinition {
 
     @Override
     public void registerAttributes(ManagementResourceRegistration resourceRegistration) {
-         if (attributes != null && attributes.length > 0) {
-             AbstractWriteAttributeHandler writeHandler = new ElytronReloadRequiredWriteAttributeHandler(attributes);
-             for (AttributeDefinition current : attributes) {
-                 resourceRegistration.registerReadWriteAttribute(current, null, writeHandler);
-             }
-         }
+        if (attributes != null && attributes.length > 0) {
+            AbstractWriteAttributeHandler writeHandler = new ElytronReloadRequiredWriteAttributeHandler(attributes);
+            for (AttributeDefinition current : attributes) {
+                resourceRegistration.registerReadWriteAttribute(current, null, writeHandler);
+            }
+        }
 
-         if (readOnlyAttributes != null) {
-             for (Entry<AttributeDefinition, OperationStepHandler> entry : readOnlyAttributes.entrySet()) {
-                 resourceRegistration.registerReadOnlyAttribute(entry.getKey(), entry.getValue());
-             }
-         }
+        if (readOnlyAttributes != null) {
+            for (Entry<AttributeDefinition, OperationStepHandler> entry : readOnlyAttributes.entrySet()) {
+                resourceRegistration.registerReadOnlyAttribute(entry.getKey(), entry.getValue());
+            }
+        }
     }
 
     @Override
