@@ -1,0 +1,103 @@
+/*
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2019, Red Hat, Inc., and individual contributors
+ * as indicated by the @author tags. See the copyright.txt file in the
+ * distribution for a full listing of individual contributors.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+package org.jboss.as.controller.security;
+
+import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.VALUE;
+import static org.jboss.as.controller.security.CredentialReference.ALIAS;
+import static org.jboss.as.controller.security.CredentialReference.CLEAR_TEXT;
+import static org.jboss.as.controller.security.CredentialReference.CREDENTIAL_STORE_CAPABILITY;
+import static org.jboss.as.controller.security.CredentialReference.STORE;
+import static org.jboss.as.controller.security.CredentialReference.getCredentialStore;
+import static org.jboss.as.controller.security.CredentialReference.updateCredentialStore;
+
+import org.jboss.as.controller.ObjectTypeAttributeDefinition;
+import org.jboss.as.controller.OperationContext;
+import org.jboss.as.controller.OperationFailedException;
+import org.jboss.as.controller.ProcessType;
+import org.jboss.as.controller.ReloadRequiredWriteAttributeHandler;
+import org.jboss.as.controller.capability.RuntimeCapability;
+import org.jboss.as.controller.descriptions.ModelDescriptionConstants;
+import org.jboss.as.controller.registry.Resource;
+import org.jboss.dmr.ModelNode;
+import org.jboss.msc.service.ServiceName;
+import org.wildfly.security.credential.store.CredentialStore;
+import org.wildfly.security.credential.store.CredentialStoreException;
+
+public class CredentialReferenceWriteAttributeHandler extends ReloadRequiredWriteAttributeHandler {
+
+    public CredentialReferenceWriteAttributeHandler(ObjectTypeAttributeDefinition attribute) {
+        super(attribute);
+    }
+
+    @Override
+    protected void finishModelStage(OperationContext context, ModelNode operation, String attributeName, ModelNode newValue,
+                                    ModelNode oldValue, Resource resource) throws OperationFailedException {
+        super.finishModelStage(context, operation, attributeName, newValue, oldValue, resource);
+        //updateCredentialReference(context, resource.getModel());
+    }
+
+    protected boolean applyUpdateToRuntime(OperationContext context, ModelNode operation, String attributeName,
+                                           ModelNode resolvedValue, ModelNode currentValue,
+                                           HandbackHolder<Void> handbackHolder) throws OperationFailedException {
+        final String store = CredentialReference.credentialReferencePartAsStringIfDefined(resolvedValue, STORE);
+        final String alias = CredentialReference.credentialReferencePartAsStringIfDefined(resolvedValue, ALIAS);
+        final String secret = CredentialReference.credentialReferencePartAsStringIfDefined(operation.get(VALUE), CLEAR_TEXT);
+
+        if (alias != null && secret != null) {
+            /*final String parentName = PathAddress.pathAddress(operation.get(ModelDescriptionConstants.ADDRESS)).getLastElement().getValue();
+            final String credentialStoreName = CredentialReference.credentialReferencePartAsStringIfDefined(resolvedValue, CredentialReference.STORE);
+            CredentialStoreUpdateService service = (CredentialStoreUpdateService) context.getServiceRegistry(true).getRequiredService(CredentialStoreUpdateService.createServiceName(parentName, credentialStoreName)).getValue();
+            try {
+                service.updateCredentialStore(alias, secret, context.getResult());
+            } catch (CredentialStoreException e) {
+                throw new OperationFailedException(e);
+            }*/
+            final String credentialStoreCapabilityName = RuntimeCapability.buildDynamicCapabilityName(CREDENTIAL_STORE_CAPABILITY, store);
+            final ServiceName credentialStoreServiceName = context.getCapabilityServiceName(credentialStoreCapabilityName, CredentialStore.class);
+            final CredentialStore credentialStore = getCredentialStore(context.getServiceRegistry(true), credentialStoreServiceName);
+            try {
+                updateCredentialStore(credentialStore, alias, secret, context.getResult());
+            } catch (CredentialStoreException e) {
+                throw new OperationFailedException(e);
+            }
+
+        }
+        return ! operation.get(VALUE).equals(currentValue);
+    }
+
+    @Override
+    protected boolean requiresRuntime(final OperationContext context) {
+        return isServerOrHostController(context);
+    }
+
+    /**
+     * Checks if the context is running on a {@linkplain ProcessType#isServer() server} or on a host controller. This
+     * will return {@code true} even if the server is running in {@link org.jboss.as.controller.RunningMode#ADMIN_ONLY}.
+     *
+     * @param context the current operation context
+     *
+     * @return {@code true} if the current context is a server or a host controller
+     */
+    private boolean isServerOrHostController(final OperationContext context) {
+        return context.getProcessType().isServer() || ! ModelDescriptionConstants.PROFILE.equals(context.getCurrentAddress().getElement(0).getKey());
+    }
+}

@@ -890,7 +890,7 @@ public class SecurityRealmAddHandler extends AbstractAddStepHandler {
             // Don't use the value from property as it is a clone and does not update the returned users ModelNode.
             ModelNode user = users.get(USER, property.getName());
             if (user.hasDefined(CredentialReference.CREDENTIAL_REFERENCE)) {
-                suppliers.put(property.getName(), CredentialReference.getCredentialSourceSupplier(context, UserResourceDefinition.CREDENTIAL_REFERENCE, user, serviceBuilder));
+                suppliers.put(property.getName(), CredentialReference.getCredentialSourceSupplier(context, UserResourceDefinition.CREDENTIAL_REFERENCE, user, serviceBuilder, property.getName()));
             }
         }
         return suppliers;

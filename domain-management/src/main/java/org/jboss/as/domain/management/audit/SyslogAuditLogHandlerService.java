@@ -101,17 +101,18 @@ public class SyslogAuditLogHandlerService implements Service, SyslogCredentialRe
             final Set<ResourceEntry> tlsStores = protocol.getChildren(AUTHENTICATION);
             for (ResourceEntry storeEntry : tlsStores) {
                 final ModelNode storeModel = storeEntry.getModel();
+                final String credentialReferenceParentName = serviceName.getSimpleName() + "." + storeEntry.getName();
                 String type = storeEntry.getPathElement().getValue();
                 if (type.equals(CLIENT_CERT_STORE)) {
                     if (storeModel.hasDefined(TlsKeyStore.KEY_PASSWORD_CREDENTIAL_REFERENCE.getName())) {
-                        tccskcsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEY_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder);
+                        tccskcsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEY_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder, credentialReferenceParentName);
                     }
                     if (storeModel.hasDefined(TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE.getName())) {
-                        tccscsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder);
+                        tccscsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder, credentialReferenceParentName);
                     }
                 } else if (type.equals(TRUSTSTORE)) {
                     if (storeModel.hasDefined(TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE.getName())) {
-                        ttsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder);
+                        ttsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder, credentialReferenceParentName);
                     }
                 }
             }
