@@ -19,6 +19,7 @@
 package org.wildfly.extension.elytron;
 
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OP;
+import static org.jboss.as.controller.security.CredentialReference.updateCredentialReference;
 import static org.wildfly.extension.elytron.Capabilities.KEY_STORE_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.KEY_STORE_RUNTIME_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.PROVIDERS_CAPABILITY;
@@ -61,6 +62,7 @@ import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.as.controller.registry.OperationEntry;
 import org.jboss.as.controller.registry.Resource;
 import org.jboss.as.controller.security.CredentialReference;
+import org.jboss.as.controller.security.CredentialReferenceWriteAttributeHandler;
 import org.jboss.as.controller.services.path.PathManager;
 import org.jboss.as.controller.services.path.PathManagerService;
 import org.jboss.dmr.ModelNode;
@@ -150,6 +152,7 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
         .build();
 
     private static final AttributeDefinition[] CONFIG_ATTRIBUTES = new AttributeDefinition[] { TYPE, PROVIDER_NAME, PROVIDERS, CREDENTIAL_REFERENCE_8_0, PATH, RELATIVE_TO, REQUIRED, ALIAS_FILTER };
+    private static final AttributeDefinition[] TEST_CONFIG_ATTRIBUTES = new AttributeDefinition[] { TYPE, PROVIDER_NAME, PROVIDERS, PATH, RELATIVE_TO, REQUIRED, ALIAS_FILTER };
 
     private static final KeyStoreAddHandler ADD = new KeyStoreAddHandler();
     private static final OperationStepHandler REMOVE = new TrivialCapabilityServiceRemoveHandler(ADD, KEY_STORE_RUNTIME_CAPABILITY);
@@ -166,9 +169,10 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
 
     @Override
     public void registerAttributes(ManagementResourceRegistration resourceRegistration) {
-        for (AttributeDefinition current : CONFIG_ATTRIBUTES) {
+        for (AttributeDefinition current : TEST_CONFIG_ATTRIBUTES) {
             resourceRegistration.registerReadWriteAttribute(current, null, WRITE);
         }
+        resourceRegistration.registerReadWriteAttribute(CREDENTIAL_REFERENCE_8_0, null, new CredentialReferenceWriteAttributeHandler(CREDENTIAL_REFERENCE_8_0));
 
         if (isServerOrHostController(resourceRegistration)) {
             resourceRegistration.registerReadOnlyAttribute(STATE, new ElytronRuntimeOnlyHandler() {
@@ -239,6 +243,12 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
         }
 
         @Override
+        protected void populateModel(ModelNode operation, ModelNode model) throws OperationFailedException {
+            super.populateModel(operation, model);
+            updateCredentialReference(model.get(CredentialReference.CREDENTIAL_REFERENCE));
+        }
+
+        @Override
         protected void performRuntime(OperationContext context, ModelNode operation, Resource resource) throws OperationFailedException {
             ModelNode model = resource.getModel();
             String providers = PROVIDERS.resolveModelAttribute(context, model).asStringOrNull();
@@ -278,7 +288,7 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
             }
 
             keyStoreService.getCredentialSourceSupplierInjector()
-                    .inject(CredentialReference.getCredentialSourceSupplier(context, KeyStoreDefinition.CREDENTIAL_REFERENCE_8_0, model, serviceBuilder));
+                    .inject(CredentialReference.getCredentialSourceSupplier(context, KeyStoreDefinition.CREDENTIAL_REFERENCE_8_0, model, serviceBuilder, operation));
 
             commonDependencies(serviceBuilder).install();
         }

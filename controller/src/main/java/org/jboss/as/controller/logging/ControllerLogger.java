@@ -74,6 +74,7 @@ import org.jboss.logging.annotations.MessageLogger;
 import org.jboss.logging.annotations.Param;
 import org.jboss.modules.ModuleLoadException;
 import org.jboss.modules.ModuleNotFoundException;
+import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.StartException;
 
@@ -3555,4 +3556,7 @@ public interface ControllerLogger extends BasicLogger {
     @LogMessage(level = WARN)
     @Message(id = 456, value = "System property %s=%s already set. It's being overridden by new value %s")
     void systemPropertyAlreadyExist(String name, String value, String value2);
+
+    @Message(id = 457, value = "The required service '%s' is not UP, it is currently '%s'.")
+    OperationFailedException requiredServiceNotUp(ServiceName serviceName, ServiceController.State state);
 }

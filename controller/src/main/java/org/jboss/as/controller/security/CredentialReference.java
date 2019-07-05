@@ -17,8 +17,11 @@
  */
 package org.jboss.as.controller.security;
 
+import static org.jboss.as.controller.logging.ControllerLogger.ROOT_LOGGER;
+
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.StringTokenizer;
 
@@ -29,10 +32,12 @@ import org.jboss.as.controller.CapabilityReferenceRecorder;
 import org.jboss.as.controller.ObjectTypeAttributeDefinition;
 import org.jboss.as.controller.OperationContext;
 import org.jboss.as.controller.OperationFailedException;
+import org.jboss.as.controller.PathAddress;
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
 import org.jboss.as.controller.access.management.SensitiveTargetAccessConstraintDefinition;
 import org.jboss.as.controller.capability.RuntimeCapability;
+import org.jboss.as.controller.descriptions.ModelDescriptionConstants;
 import org.jboss.as.controller.logging.ControllerLogger;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
@@ -49,6 +54,8 @@ import org.wildfly.security.credential.source.CommandCredentialSource;
 import org.wildfly.security.credential.source.CredentialSource;
 import org.wildfly.security.credential.source.CredentialStoreCredentialSource;
 import org.wildfly.security.credential.store.CredentialStore;
+import org.wildfly.security.credential.store.CredentialStoreException;
+import org.wildfly.security.password.Password;
 import org.wildfly.security.password.interfaces.ClearPassword;
 import org.wildfly.security.util.PasswordBasedEncryptionUtil;
 
@@ -110,6 +117,9 @@ public final class CredentialReference {
     /** Uses credentialStoreAttributeWithCapabilityReference */
     private static final ObjectTypeAttributeDefinition credentialReferenceADWithCapabilityReference_1_0;
     private static final ObjectTypeAttributeDefinition credentialReferenceADWithCapabilityReference;
+
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final String CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
     static {
         // clear-text and store mutually exclusive
@@ -460,7 +470,6 @@ public final class CredentialReference {
      * @throws OperationFailedException wrapping exception when something goes wrong
      */
     public static ExceptionSupplier<CredentialSource, Exception> getCredentialSourceSupplier(OperationContext context, ObjectTypeAttributeDefinition credentialReferenceAttributeDefinition, ModelNode model, ServiceBuilder<?> serviceBuilder) throws OperationFailedException {
-
         ModelNode value = credentialReferenceAttributeDefinition.resolveModelAttribute(context, model);
 
         final String credentialStoreName;
@@ -603,4 +612,237 @@ public final class CredentialReference {
         };
     }
 
+    /**
+     * Get the ExceptionSupplier of {@link CredentialSource} which might throw an Exception while getting it.
+     * {@link CredentialSource} is used later to retrieve the credential requested by configuration.
+     *
+     * @param context operation context
+     * @param credentialReferenceAttributeDefinition credential-reference attribute definition
+     * @param model containing the actual values
+     * @param serviceBuilder of service which needs the credential
+     * @param operation the operation
+     * @return ExceptionSupplier of CredentialSource
+     * @throws OperationFailedException wrapping exception when something goes wrong
+     */
+    public static ExceptionSupplier<CredentialSource, Exception> getCredentialSourceSupplier(OperationContext context, ObjectTypeAttributeDefinition credentialReferenceAttributeDefinition, ModelNode model, ServiceBuilder<?> serviceBuilder, ModelNode operation) throws OperationFailedException {
+        ModelNode value = credentialReferenceAttributeDefinition.resolveModelAttribute(context, model);
+
+        final String credentialStoreName;
+        final String credentialAlias;
+        final String credentialType;
+        final String secret;
+
+        if (value.isDefined()) {
+            credentialStoreName = credentialReferencePartAsStringIfDefined(value, CredentialReference.STORE);
+            credentialAlias = credentialReferencePartAsStringIfDefined(value, CredentialReference.ALIAS);
+            credentialType = credentialReferencePartAsStringIfDefined(value, CredentialReference.TYPE);
+            secret = credentialReferencePartAsStringIfDefined(operation.get(CREDENTIAL_REFERENCE), CredentialReference.CLEAR_TEXT);
+        } else {
+            credentialStoreName = null;
+            credentialAlias = null;
+            credentialType = null;
+            secret = null;
+        }
+
+        final ServiceRegistry serviceRegistry;
+        final ServiceName credentialStoreServiceName;
+        if (credentialAlias != null) {
+            // use credential store service
+            String credentialStoreCapabilityName = RuntimeCapability.buildDynamicCapabilityName(CREDENTIAL_STORE_CAPABILITY, credentialStoreName);
+            credentialStoreServiceName = context.getCapabilityServiceName(credentialStoreCapabilityName, CredentialStore.class);
+            if(serviceBuilder != null) {
+                serviceBuilder.requires(credentialStoreServiceName);
+
+                String parent = PathAddress.pathAddress(operation.get(ModelDescriptionConstants.ADDRESS)).getLastElement().getValue();
+                ServiceName credentialStoreUpdateServiceName = CredentialStoreUpdateService.createServiceName(parent, credentialStoreName);
+                CredentialStoreUpdateService credentialStoreUpdateService = new CredentialStoreUpdateService(credentialAlias, secret);
+                ServiceBuilder<CredentialStoreUpdateService> credentialStoreUpdateServiceBuilder = context.getServiceTarget().addService(credentialStoreUpdateServiceName, credentialStoreUpdateService).setInitialMode(ServiceController.Mode.ACTIVE);
+                credentialStoreUpdateServiceBuilder.addDependency(context.getCapabilityServiceName(credentialStoreCapabilityName, CredentialStore.class), CredentialStore.class, credentialStoreUpdateService.getCredentialStoreInjector());
+                credentialStoreUpdateServiceBuilder.install();
+                serviceBuilder.requires(credentialStoreUpdateServiceName);
+            }
+            serviceRegistry = context.getServiceRegistry(false);
+        } else {
+            credentialStoreServiceName = null;
+            serviceRegistry = null;
+        }
+
+        return new ExceptionSupplier<CredentialSource, Exception>() {
+
+            private String[] parseCommand(String command, String delimiter) {
+                // comma can be back slashed
+                final String[] parsedCommand = command.split("(?<!\\\\)" + delimiter);
+                for (int k = 0; k < parsedCommand.length; k++) {
+                    if (parsedCommand[k].indexOf('\\') != -1)
+                        parsedCommand[k] = parsedCommand[k].replaceAll("\\\\" + delimiter, delimiter);
+                }
+                return parsedCommand;
+            }
+
+            private String stripType(String commandSpec) {
+                StringTokenizer tokenizer = new StringTokenizer(commandSpec, "{}");
+                tokenizer.nextToken();
+                return tokenizer.nextToken();
+            }
+
+            /**
+             * Gets a Credential Store Supplier.
+             *
+             * @return a supplier
+             */
+            @Override
+            public CredentialSource get() throws Exception {
+                if (credentialAlias != null) {
+                    return new CredentialStoreCredentialSource(
+                            () -> {
+                                ServiceController<?> controller = serviceRegistry.getService(credentialStoreServiceName);
+                                if (controller != null) {
+                                    Service<CredentialStore> credentialStoreService = (Service<CredentialStore>) controller.getService();
+                                    return credentialStoreService.getValue();
+                                } else {
+                                    return null;
+                                }
+                            }, credentialAlias);
+                } else if (credentialType != null && credentialType.equalsIgnoreCase("COMMAND")) {
+                    CommandCredentialSource.Builder command = CommandCredentialSource.builder();
+                    String commandSpec = secret.trim();
+                    String[] parts;
+                    if (commandSpec.startsWith("{EXT")) {
+                        parts = parseCommand(stripType(commandSpec), " ");  // space delimited
+                    } else if (commandSpec.startsWith("{CMD")) {
+                        parts = parseCommand(stripType(commandSpec), ",");  // comma delimited
+                    } else {
+                        parts = parseCommand(commandSpec, " ");
+                    }
+                    for(String part: parts) {
+                        command.addCommand(part);
+                    }
+                    return command.build();
+                } else if (secret != null && secret.startsWith("MASK-")) {
+                    // simple MASK- string with PicketBox compatibility and fixed algorithm and initial key material
+                    return new CredentialSource() {
+                        @Override
+                        public SupportLevel getCredentialAcquireSupport(Class<? extends Credential> credentialType, String algorithmName, AlgorithmParameterSpec parameterSpec) throws IOException {
+                            return credentialType == PasswordCredential.class ? SupportLevel.SUPPORTED : SupportLevel.UNSUPPORTED;
+                        }
+
+                        @Override
+                        public <C extends Credential> C getCredential(Class<C> credentialType, String algorithmName, AlgorithmParameterSpec parameterSpec) throws IOException {
+                            String[] part = secret.substring(5).split(";");  // strip "MASK-" and split by ';'
+                            if (part.length != 3) {
+                                throw ControllerLogger.ROOT_LOGGER.wrongMaskedPasswordFormat();
+                            }
+                            String salt = part[1];
+                            final int iterationCount;
+                            try {
+                                iterationCount = Integer.parseInt(part[2]);
+                            } catch (NumberFormatException e) {
+                                throw ControllerLogger.ROOT_LOGGER.wrongMaskedPasswordFormat();
+                            }
+                            try {
+                                PasswordBasedEncryptionUtil decryptUtil = new PasswordBasedEncryptionUtil.Builder()
+                                        .picketBoxCompatibility()
+                                        .salt(salt)
+                                        .iteration(iterationCount)
+                                        .decryptMode()
+                                        .build();
+                                return credentialType.cast(new PasswordCredential(ClearPassword.createRaw(ClearPassword.ALGORITHM_CLEAR,
+                                        decryptUtil.decodeAndDecrypt(part[0]))));
+                            } catch (GeneralSecurityException e) {
+                                throw new IOException(e);
+                            }
+                        }
+                    };
+                } else {
+                    if (secret != null) {
+                        // clear text password
+                        return new CredentialSource() {
+                            @Override
+                            public SupportLevel getCredentialAcquireSupport(Class<? extends Credential> credentialType, String algorithmName, AlgorithmParameterSpec parameterSpec) throws IOException {
+                                return credentialType == PasswordCredential.class ? SupportLevel.SUPPORTED : SupportLevel.UNSUPPORTED;
+                            }
+
+                            @Override
+                            public <C extends Credential> C getCredential(Class<C> credentialType, String algorithmName, AlgorithmParameterSpec parameterSpec) throws IOException {
+                                return credentialType.cast(new PasswordCredential(ClearPassword.createRaw(ClearPassword.ALGORITHM_CLEAR, secret.toCharArray())));
+                            }
+                        };
+                    } else {
+                        return null;  // this indicates use of original method to get password from configuration
+                    }
+                }
+            }
+        };
+    }
+
+    static CredentialStore getCredentialStore(ServiceRegistry serviceRegistry, ServiceName credentialStoreServiceName) throws OperationFailedException {
+        ServiceController<CredentialStore> controller = getRequiredService(serviceRegistry, credentialStoreServiceName, CredentialStore.class);
+        ServiceController.State serviceState = controller.getState();
+        if (serviceState != ServiceController.State.UP) {
+            throw ROOT_LOGGER.requiredServiceNotUp(credentialStoreServiceName, serviceState);
+        }
+        return controller.getService().getValue();
+    }
+
+    static <T> ServiceController<T> getRequiredService(ServiceRegistry serviceRegistry, ServiceName serviceName, Class<T> serviceType) {
+        ServiceController<?> controller = serviceRegistry.getRequiredService(serviceName);
+        return (ServiceController<T>) controller;
+    }
+
+    static void storeSecret(CredentialStore credentialStore, String alias, String secretValue) throws CredentialStoreException {
+        if (alias != null && secretValue != null) {
+            char[] secret = secretValue != null ? secretValue.toCharArray() : new char[0];
+            Password clearPassword = ClearPassword.createRaw(ClearPassword.ALGORITHM_CLEAR, secret);
+            credentialStore.store(alias, new PasswordCredential(clearPassword));
+            try {
+                credentialStore.flush();
+            } catch (CredentialStoreException e) {
+                // flush failed, remove the entry from the store to avoid an inconsistency between
+                // the store on the FS and in the memory
+                credentialStore.remove(alias, PasswordCredential.class);
+                throw e;
+            }
+        }
+    }
+
+    public static void updateCredentialReference(ModelNode credentialReference) throws OperationFailedException {
+        final String credentialStoreName;
+        final String credentialType;
+        final String secret;
+        final String credentialAlias;
+
+        if (credentialReference.isDefined()) {
+            credentialStoreName = credentialReferencePartAsStringIfDefined(credentialReference, CredentialReference.STORE);
+            credentialAlias = credentialReferencePartAsStringIfDefined(credentialReference, ALIAS);
+            credentialType = credentialReferencePartAsStringIfDefined(credentialReference, CredentialReference.TYPE);
+            secret = credentialReferencePartAsStringIfDefined(credentialReference, CLEAR_TEXT);
+        } else {
+            credentialStoreName = null;
+            credentialAlias = null;
+            credentialType = null;
+            secret = null;
+        }
+
+        boolean removeSecret = false;
+        if (credentialStoreName != null && secret != null) {
+            if (credentialAlias != null) {
+                removeSecret = true;
+            } else if (! (credentialType != null && credentialType.equalsIgnoreCase("COMMAND")) && ! secret.startsWith("MASK-")) {
+                credentialReference.get(ALIAS).set(generateAlias());
+                removeSecret = true;
+            }
+            if (removeSecret) {
+                credentialReference.get(CLEAR_TEXT).set(new ModelNode());
+            }
+        }
+    }
+
+    private static String generateAlias() {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < 10; i++) {
+            int index = (int) (RANDOM.nextDouble() * CHARS.length());
+            builder.append(CHARS.substring(index, index + 1));
+        }
+        return builder.toString();
+    }
 }
