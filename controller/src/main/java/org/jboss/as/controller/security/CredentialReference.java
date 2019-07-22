@@ -100,6 +100,12 @@ public final class CredentialReference {
      */
     public static final String CLEAR_TEXT = "clear-text";
 
+    public static final String CREDENTIAL_STORE_UPDATE = "credential-store-update";
+
+    public static final String NEW_ENTRY_ADDED = "new-entry-added";
+
+    public static final String EXISTING_ENTRY_UPDATED = "existing-entry-updated";
+
     private static final SimpleAttributeDefinition credentialStoreAttribute;
     private static final SimpleAttributeDefinition credentialStoreAttribute_1_0;
     private static final SimpleAttributeDefinition credentialAliasAttribute;

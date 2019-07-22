@@ -26,6 +26,7 @@ import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
 import org.jboss.msc.value.InjectedValue;
+import org.wildfly.security.credential.PasswordCredential;
 import org.wildfly.security.credential.store.CredentialStore;
 import org.wildfly.security.credential.store.CredentialStoreException;
 
@@ -73,11 +74,14 @@ class CredentialStoreUpdateService implements Service<CredentialStoreUpdateServi
         return this;
     }
 
-    public void updateCredentialStore(String alias, String secret) throws CredentialStoreException {
+    public boolean updateCredentialStore(String alias, String secret) throws CredentialStoreException {
+        boolean exists = false;
         if (alias != null && secret != null) {
             CredentialStore credentialStore = injectedCredentialStore.getValue();
+            exists = credentialStore.exists(alias, PasswordCredential.class);
             CredentialReference.storeSecret(credentialStore, alias, secret);
         }
+        return exists;
     }
 
     Injector<CredentialStore> getCredentialStoreInjector() {
