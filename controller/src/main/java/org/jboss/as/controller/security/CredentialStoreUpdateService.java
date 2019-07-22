@@ -37,7 +37,7 @@ import org.wildfly.security.credential.store.CredentialStoreException;
  * @author <a href="mailto:fjuma@redhat.com">Farah Juma</a>
  */
 
-class CredentialStoreUpdateService implements Service<CredentialStoreUpdateService> {
+public class CredentialStoreUpdateService implements Service<CredentialStoreUpdateService> {
 
     private String alias;
     private String secret;
@@ -56,11 +56,11 @@ class CredentialStoreUpdateService implements Service<CredentialStoreUpdateServi
 
     @Override
     public void start(StartContext startContext) throws StartException {
-        try {
+        /*try {
             updateCredentialStore(alias, secret);
         } catch (CredentialStoreException e) {
             throw new StartException(e);
-        }
+        }*/
     }
 
     @Override
@@ -72,6 +72,10 @@ class CredentialStoreUpdateService implements Service<CredentialStoreUpdateServi
     @Override
     public synchronized CredentialStoreUpdateService getValue() throws IllegalStateException, IllegalArgumentException {
         return this;
+    }
+
+    public boolean updateCredentialStore() throws CredentialStoreException {
+        return updateCredentialStore(alias, secret);
     }
 
     public boolean updateCredentialStore(String alias, String secret) throws CredentialStoreException {

@@ -19,6 +19,10 @@
 package org.wildfly.extension.elytron;
 
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OP;
+import static org.jboss.as.controller.security.CredentialReference.CREDENTIAL_REFERENCE;
+import static org.jboss.as.controller.security.CredentialReference.CREDENTIAL_STORE_UPDATE;
+import static org.jboss.as.controller.security.CredentialReference.EXISTING_ENTRY_UPDATED;
+import static org.jboss.as.controller.security.CredentialReference.NEW_ENTRY_ADDED;
 import static org.jboss.as.controller.security.CredentialReference.updateCredentialReference;
 import static org.wildfly.extension.elytron.Capabilities.KEY_STORE_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.KEY_STORE_RUNTIME_CAPABILITY;
@@ -49,6 +53,7 @@ import org.jboss.as.controller.OperationContext;
 import org.jboss.as.controller.OperationContext.RollbackHandler;
 import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.OperationStepHandler;
+import org.jboss.as.controller.PathAddress;
 import org.jboss.as.controller.PathElement;
 import org.jboss.as.controller.ResourceDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinition;
@@ -57,12 +62,14 @@ import org.jboss.as.controller.SimpleOperationDefinition;
 import org.jboss.as.controller.SimpleOperationDefinitionBuilder;
 import org.jboss.as.controller.SimpleResourceDefinition;
 import org.jboss.as.controller.capability.RuntimeCapability;
+import org.jboss.as.controller.descriptions.ModelDescriptionConstants;
 import org.jboss.as.controller.descriptions.StandardResourceDescriptionResolver;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.as.controller.registry.OperationEntry;
 import org.jboss.as.controller.registry.Resource;
 import org.jboss.as.controller.security.CredentialReference;
 import org.jboss.as.controller.security.CredentialReferenceWriteAttributeHandler;
+import org.jboss.as.controller.security.CredentialStoreUpdateService;
 import org.jboss.as.controller.services.path.PathManager;
 import org.jboss.as.controller.services.path.PathManagerService;
 import org.jboss.dmr.ModelNode;
@@ -74,6 +81,7 @@ import org.jboss.msc.service.ServiceController.State;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceTarget;
 import org.wildfly.extension.elytron.KeyStoreService.LoadKey;
+import org.wildfly.security.credential.store.CredentialStoreException;
 
 /**
  * A {@link ResourceDefinition} for a single {@link KeyStore}.
@@ -289,6 +297,21 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
 
             keyStoreService.getCredentialSourceSupplierInjector()
                     .inject(CredentialReference.getCredentialSourceSupplier(context, KeyStoreDefinition.CREDENTIAL_REFERENCE_8_0, model, serviceBuilder, operation));
+
+            context.addStep((OperationContext context1, ModelNode operation1) -> {
+                final String parentName = PathAddress.pathAddress(operation1.get(ModelDescriptionConstants.ADDRESS)).getLastElement().getValue();
+                // FJ CHECK MODEL HERE
+                final String credentialStoreName = CredentialReference.credentialReferencePartAsStringIfDefined(model.get(CredentialReference.CREDENTIAL_REFERENCE), CredentialReference.STORE);
+                CredentialStoreUpdateService service = (CredentialStoreUpdateService) context1.getServiceRegistry(true).getRequiredService(CredentialStoreUpdateService.createServiceName(parentName, credentialStoreName)).getValue();
+                try {
+                    boolean exists = service.updateCredentialStore();
+                    context1.getResult().get(CREDENTIAL_STORE_UPDATE).set(exists ? EXISTING_ENTRY_UPDATED : NEW_ENTRY_ADDED);
+                } catch (CredentialStoreException e) {
+                    throw new OperationFailedException(e);
+                }
+
+
+            }, OperationContext.Stage.RUNTIME);
 
             commonDependencies(serviceBuilder).install();
         }
