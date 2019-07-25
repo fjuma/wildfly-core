@@ -661,11 +661,20 @@ public final class CredentialReference {
 
                 String parent = PathAddress.pathAddress(operation.get(ModelDescriptionConstants.ADDRESS)).getLastElement().getValue();
                 ServiceName credentialStoreUpdateServiceName = CredentialStoreUpdateService.createServiceName(parent, credentialStoreName);
-                CredentialStoreUpdateService credentialStoreUpdateService = new CredentialStoreUpdateService(credentialAlias, secret);
+                CredentialStoreUpdateService credentialStoreUpdateService = new CredentialStoreUpdateService(credentialAlias, secret, context);
                 ServiceBuilder<CredentialStoreUpdateService> credentialStoreUpdateServiceBuilder = context.getServiceTarget().addService(credentialStoreUpdateServiceName, credentialStoreUpdateService).setInitialMode(ServiceController.Mode.ACTIVE);
                 credentialStoreUpdateServiceBuilder.addDependency(context.getCapabilityServiceName(credentialStoreCapabilityName, CredentialStore.class), CredentialStore.class, credentialStoreUpdateService.getCredentialStoreInjector());
                 credentialStoreUpdateServiceBuilder.install();
                 serviceBuilder.requires(credentialStoreUpdateServiceName);
+                /*context.addStep((OperationContext context1, ModelNode operation1) -> {
+                    CredentialStoreUpdateService service = (CredentialStoreUpdateService) context1.getServiceRegistry(true).getRequiredService(CredentialStoreUpdateService.createServiceName(parent, credentialStoreName)).getValue();
+                    CredentialStoreUpdateService.CredentialStoreStatus status = service.getCredentialStoreStatus();
+                    if (status == CredentialStoreUpdateService.CredentialStoreStatus.ENTRY_ADDED) {
+                        context1.getResult().get(CREDENTIAL_STORE_UPDATE).set(NEW_ENTRY_ADDED);
+                    } else if (status == CredentialStoreUpdateService.CredentialStoreStatus.ENTRY_UPDATED) {
+                        context1.getResult().get(CREDENTIAL_STORE_UPDATE).set(EXISTING_ENTRY_UPDATED);
+                    }
+                }, OperationContext.Stage.RUNTIME, true);*/
             }
             serviceRegistry = context.getServiceRegistry(false);
         } else {
