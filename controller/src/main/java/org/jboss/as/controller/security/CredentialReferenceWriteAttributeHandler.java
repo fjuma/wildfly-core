@@ -32,6 +32,7 @@ import org.jboss.as.controller.ObjectTypeAttributeDefinition;
 import org.jboss.as.controller.OperationContext;
 import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.PathAddress;
+import org.jboss.as.controller.ProcessType;
 import org.jboss.as.controller.ReloadRequiredWriteAttributeHandler;
 import org.jboss.as.controller.descriptions.ModelDescriptionConstants;
 import org.jboss.as.controller.registry.Resource;
@@ -71,15 +72,20 @@ public class CredentialReferenceWriteAttributeHandler extends ReloadRequiredWrit
         return ! operation.get(VALUE).equals(currentValue);
     }
 
-    /*@Override
-    protected boolean requiresRuntime(OperationContext context) {
-        return !context.isBooting();
+    @Override
+    protected boolean requiresRuntime(final OperationContext context) {
+        return isServerOrHostController(context);
     }
 
-    @Override
-    protected void revertUpdateToRuntime(OperationContext context, ModelNode operation, String attributeName,
-                                         ModelNode valueToRestore, ModelNode valueToRevert, Void handback)
-            throws OperationFailedException {
-        System.out.println("sf");
-    }*/
+    /**
+     * Checks if the context is running on a {@linkplain ProcessType#isServer() server} or on a host controller. This
+     * will return {@code true} even if the server is running in {@link org.jboss.as.controller.RunningMode#ADMIN_ONLY}.
+     *
+     * @param context the current operation context
+     *
+     * @return {@code true} if the current context is a server or a host controller
+     */
+    private boolean isServerOrHostController(final OperationContext context) {
+        return context.getProcessType().isServer() || ! ModelDescriptionConstants.PROFILE.equals(context.getCurrentAddress().getElement(0).getKey());
+    }
 }

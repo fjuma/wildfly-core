@@ -152,11 +152,11 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
         .build();
 
     private static final AttributeDefinition[] CONFIG_ATTRIBUTES = new AttributeDefinition[] { TYPE, PROVIDER_NAME, PROVIDERS, CREDENTIAL_REFERENCE_8_0, PATH, RELATIVE_TO, REQUIRED, ALIAS_FILTER };
-    private static final AttributeDefinition[] TEST_CONFIG_ATTRIBUTES = new AttributeDefinition[] { TYPE, PROVIDER_NAME, PROVIDERS, PATH, RELATIVE_TO, REQUIRED, ALIAS_FILTER };
+    private static final AttributeDefinition[] CONFIG_ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE = new AttributeDefinition[] { TYPE, PROVIDER_NAME, PROVIDERS, PATH, RELATIVE_TO, REQUIRED, ALIAS_FILTER };
 
     private static final KeyStoreAddHandler ADD = new KeyStoreAddHandler();
     private static final OperationStepHandler REMOVE = new TrivialCapabilityServiceRemoveHandler(ADD, KEY_STORE_RUNTIME_CAPABILITY);
-    private static final AbstractWriteAttributeHandler WRITE = new ElytronReloadRequiredWriteAttributeHandler(CONFIG_ATTRIBUTES);
+    private static final AbstractWriteAttributeHandler WRITE = new ElytronReloadRequiredWriteAttributeHandler(CONFIG_ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE);
 
     KeyStoreDefinition() {
         super(new Parameters(PathElement.pathElement(ElytronDescriptionConstants.KEY_STORE), RESOURCE_RESOLVER)
@@ -169,7 +169,7 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
 
     @Override
     public void registerAttributes(ManagementResourceRegistration resourceRegistration) {
-        for (AttributeDefinition current : TEST_CONFIG_ATTRIBUTES) {
+        for (AttributeDefinition current : CONFIG_ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE) {
             resourceRegistration.registerReadWriteAttribute(current, null, WRITE);
         }
         resourceRegistration.registerReadWriteAttribute(CREDENTIAL_REFERENCE_8_0, null, new CredentialReferenceWriteAttributeHandler(CREDENTIAL_REFERENCE_8_0));
@@ -289,20 +289,6 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
 
             keyStoreService.getCredentialSourceSupplierInjector()
                     .inject(CredentialReference.getCredentialSourceSupplier(context, KeyStoreDefinition.CREDENTIAL_REFERENCE_8_0, model, serviceBuilder, operation));
-
-            /*context.addStep((OperationContext context1, ModelNode operation1) -> {
-                final String parentName = PathAddress.pathAddress(operation1.get(ModelDescriptionConstants.ADDRESS)).getLastElement().getValue();
-                // FJ CHECK MODEL HERE
-                final String credentialStoreName = CredentialReference.credentialReferencePartAsStringIfDefined(model.get(CredentialReference.CREDENTIAL_REFERENCE), CredentialReference.STORE);
-                CredentialStoreUpdateService service = (CredentialStoreUpdateService) context1.getServiceRegistry(true).getRequiredService(CredentialStoreUpdateService.createServiceName(parentName, credentialStoreName)).getValue();
-
-                CredentialStoreUpdateService.CredentialStoreStatus status = service.getCredentialStoreStatus();
-                if (status == CredentialStoreUpdateService.CredentialStoreStatus.ENTRY_ADDED) {
-                    context1.getResult().get(CREDENTIAL_STORE_UPDATE).set(NEW_ENTRY_ADDED);
-                } else if (status == CredentialStoreUpdateService.CredentialStoreStatus.ENTRY_UPDATED) {
-                    context1.getResult().get(CREDENTIAL_STORE_UPDATE).set(EXISTING_ENTRY_UPDATED);
-                }
-            }, OperationContext.Stage.RUNTIME);*/
 
             commonDependencies(serviceBuilder).install();
         }
