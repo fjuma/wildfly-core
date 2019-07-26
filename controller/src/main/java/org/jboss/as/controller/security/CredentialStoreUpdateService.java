@@ -23,7 +23,7 @@ import static org.jboss.as.controller.security.CredentialReference.CREDENTIAL_ST
 import static org.jboss.as.controller.security.CredentialReference.EXISTING_ENTRY_UPDATED;
 import static org.jboss.as.controller.security.CredentialReference.NEW_ENTRY_ADDED;
 
-import org.jboss.as.controller.OperationContext;
+import org.jboss.dmr.ModelNode;
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceName;
@@ -50,21 +50,15 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
 
     private String alias;
     private String secret;
-    private CredentialStoreStatus credentialStoreStatus;
-    private final OperationContext operationContext;
+    //private CredentialStoreStatus credentialStoreStatus;
+    private ModelNode result;
 
     private final InjectedValue<CredentialStore> injectedCredentialStore = new InjectedValue<>();
 
-    CredentialStoreUpdateService(String alias, String secret) {
+    CredentialStoreUpdateService(String alias, String secret, ModelNode result) {
         this.alias = alias;
         this.secret = secret;
-        this.operationContext = null;
-    }
-
-    CredentialStoreUpdateService(String alias, String secret, OperationContext operationContext) {
-        this.alias = alias;
-        this.secret = secret;
-        this.operationContext = operationContext;
+        this.result = result;
     }
 
     /*
@@ -75,7 +69,8 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
     @Override
     public void start(StartContext startContext) throws StartException {
         try {
-            credentialStoreStatus = updateCredentialStore(alias, secret);
+            //credentialStoreStatus =
+            updateCredentialStore(alias, secret, result);
         } catch (CredentialStoreException e) {
             throw new StartException(e);
         }
@@ -85,7 +80,8 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
     public void stop(StopContext stopContext) {
         this.alias = null;
         this.secret = null;
-        this.credentialStoreStatus = null;
+        this.result = null;
+        //this.credentialStoreStatus = null;
     }
 
     @Override
@@ -93,19 +89,19 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
         return this;
     }
 
-    public CredentialStoreStatus updateCredentialStore(String alias, String secret) throws CredentialStoreException {
+    public void updateCredentialStore(String alias, String secret, ModelNode result) throws CredentialStoreException {
         if (alias != null && secret != null) {
             CredentialStore credentialStore = injectedCredentialStore.getValue();
             boolean exists = credentialStore.exists(alias, PasswordCredential.class);
             CredentialReference.storeSecret(credentialStore, alias, secret);
             if (exists) {
-                operationContext.getResult().get(CREDENTIAL_STORE_UPDATE).set(EXISTING_ENTRY_UPDATED);
+                result.get(CREDENTIAL_STORE_UPDATE).set(EXISTING_ENTRY_UPDATED);
             } else {
-                operationContext.getResult().get(CREDENTIAL_STORE_UPDATE).set(NEW_ENTRY_ADDED);
+                result.get(CREDENTIAL_STORE_UPDATE).set(NEW_ENTRY_ADDED);
             }
-            return exists ? CredentialStoreStatus.ENTRY_UPDATED : CredentialStoreStatus.ENTRY_ADDED;
+            //return exists ? CredentialStoreStatus.ENTRY_UPDATED : CredentialStoreStatus.ENTRY_ADDED;
         }
-        return CredentialStoreStatus.NO_OP;
+        //return CredentialStoreStatus.NO_OP;
     }
 
     Injector<CredentialStore> getCredentialStoreInjector() {
@@ -116,8 +112,8 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
         return ServiceName.of("org", "wildfly", "security", "elytron").append("credential-store-update", parentName + "-" + credentialStoreName);
     }
 
-    public CredentialStoreStatus getCredentialStoreStatus () {
+    /*public CredentialStoreStatus getCredentialStoreStatus () {
         return credentialStoreStatus;
-    }
+    }*/
 
 }

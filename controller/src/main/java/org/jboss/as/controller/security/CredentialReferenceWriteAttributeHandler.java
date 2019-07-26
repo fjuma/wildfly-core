@@ -25,9 +25,6 @@ import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.VAL
 import static org.jboss.as.controller.security.CredentialReference.ALIAS;
 import static org.jboss.as.controller.security.CredentialReference.CLEAR_TEXT;
 import static org.jboss.as.controller.security.CredentialReference.CREDENTIAL_REFERENCE;
-import static org.jboss.as.controller.security.CredentialReference.CREDENTIAL_STORE_UPDATE;
-import static org.jboss.as.controller.security.CredentialReference.EXISTING_ENTRY_UPDATED;
-import static org.jboss.as.controller.security.CredentialReference.NEW_ENTRY_ADDED;
 import static org.jboss.as.controller.security.CredentialReference.updateCredentialReference;
 
 import org.jboss.as.controller.ObjectTypeAttributeDefinition;
@@ -64,13 +61,13 @@ public class CredentialReferenceWriteAttributeHandler extends ReloadRequiredWrit
             final String credentialStoreName = CredentialReference.credentialReferencePartAsStringIfDefined(resolvedValue, CredentialReference.STORE);
             CredentialStoreUpdateService service = (CredentialStoreUpdateService) context.getServiceRegistry(true).getRequiredService(CredentialStoreUpdateService.createServiceName(parentName, credentialStoreName)).getValue();
             try {
-                service.updateCredentialStore(alias, secret);
-                CredentialStoreUpdateService.CredentialStoreStatus status = service.getCredentialStoreStatus();
+                service.updateCredentialStore(alias, secret, context.getResult());
+                /*CredentialStoreUpdateService.CredentialStoreStatus status = service.getCredentialStoreStatus();
                 if (status == CredentialStoreUpdateService.CredentialStoreStatus.ENTRY_ADDED) {
                     context.getResult().get(CREDENTIAL_STORE_UPDATE).set(NEW_ENTRY_ADDED);
                 } else if (status == CredentialStoreUpdateService.CredentialStoreStatus.ENTRY_UPDATED) {
                     context.getResult().get(CREDENTIAL_STORE_UPDATE).set(EXISTING_ENTRY_UPDATED);
-                }
+                }*/
             } catch (CredentialStoreException e) {
                 throw new OperationFailedException(e);
             }
