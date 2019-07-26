@@ -19,7 +19,6 @@
 
 package org.jboss.as.controller.security;
 
-import static org.jboss.as.controller.security.CredentialReference.CREDENTIAL_STORE_UPDATE;
 import static org.jboss.as.controller.security.CredentialReference.EXISTING_ENTRY_UPDATED;
 import static org.jboss.as.controller.security.CredentialReference.NEW_ENTRY_ADDED;
 
@@ -44,13 +43,8 @@ import org.wildfly.security.credential.store.CredentialStoreException;
 
 public class CredentialStoreUpdateService implements Service<CredentialStoreUpdateService> {
 
-    public enum CredentialStoreStatus {
-        ENTRY_ADDED, ENTRY_UPDATED, NO_OP;
-    }
-
     private String alias;
     private String secret;
-    //private CredentialStoreStatus credentialStoreStatus;
     private ModelNode result;
 
     private final InjectedValue<CredentialStore> injectedCredentialStore = new InjectedValue<>();
@@ -69,7 +63,6 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
     @Override
     public void start(StartContext startContext) throws StartException {
         try {
-            //credentialStoreStatus =
             updateCredentialStore(alias, secret, result);
         } catch (CredentialStoreException e) {
             throw new StartException(e);
@@ -81,7 +74,6 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
         this.alias = null;
         this.secret = null;
         this.result = null;
-        //this.credentialStoreStatus = null;
     }
 
     @Override
@@ -95,13 +87,13 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
             boolean exists = credentialStore.exists(alias, PasswordCredential.class);
             CredentialReference.storeSecret(credentialStore, alias, secret);
             if (exists) {
-                result.get(CREDENTIAL_STORE_UPDATE).set(EXISTING_ENTRY_UPDATED);
+                //result.get(CREDENTIAL_STORE_UPDATE)
+                result.set(EXISTING_ENTRY_UPDATED);
             } else {
-                result.get(CREDENTIAL_STORE_UPDATE).set(NEW_ENTRY_ADDED);
+                //result.get(CREDENTIAL_STORE_UPDATE)
+                result.set(NEW_ENTRY_ADDED);
             }
-            //return exists ? CredentialStoreStatus.ENTRY_UPDATED : CredentialStoreStatus.ENTRY_ADDED;
         }
-        //return CredentialStoreStatus.NO_OP;
     }
 
     Injector<CredentialStore> getCredentialStoreInjector() {
