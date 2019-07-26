@@ -251,7 +251,7 @@ class AdvancedModifiableKeyStoreDecorator extends ModifiableKeyStoreDecorator {
             ModelNode extensions = EXTENSIONS.resolveModelAttribute(context, operation);
             ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier = null;
             if (CREDENTIAL_REFERENCE.resolveModelAttribute(context, operation).isDefined()) {
-                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, operation, null);
+                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, operation, null, operation);
             }
             char[] keyPassword = resolveKeyPassword(((KeyStoreService) keyStoreService), credentialSourceSupplier);
 
@@ -328,7 +328,7 @@ class AdvancedModifiableKeyStoreDecorator extends ModifiableKeyStoreDecorator {
             ModelNode extensions = EXTENSIONS.resolveModelAttribute(context, operation);
             ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier = null;
             if (CREDENTIAL_REFERENCE.resolveModelAttribute(context, operation).isDefined()) {
-                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, operation, null);
+                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, operation, null, operation);
             }
             char[] keyPassword = resolveKeyPassword(((KeyStoreService) keyStoreService), credentialSourceSupplier);
             String path = PATH.resolveModelAttribute(context, operation).asString();
@@ -420,7 +420,7 @@ class AdvancedModifiableKeyStoreDecorator extends ModifiableKeyStoreDecorator {
             String alias = ALIAS.resolveModelAttribute(context, operation).asString();
             ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier = null;
             if (CREDENTIAL_REFERENCE.resolveModelAttribute(context, operation).isDefined()) {
-                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, operation, null);
+                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, operation, null, operation);
             }
             char[] keyPassword = resolveKeyPassword(((KeyStoreService) keyStoreService), credentialSourceSupplier);
             String path = PATH.resolveModelAttribute(context, operation).asString();
@@ -681,7 +681,7 @@ class AdvancedModifiableKeyStoreDecorator extends ModifiableKeyStoreDecorator {
             String newAlias = NEW_ALIAS.resolveModelAttribute(context, operation).asString();
             ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier = null;
             if (CREDENTIAL_REFERENCE.resolveModelAttribute(context, operation).isDefined()) {
-                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, operation, null);
+                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, operation, null, operation);
             }
             char[] keyPassword = resolveKeyPassword(((KeyStoreService) keyStoreService), credentialSourceSupplier);
 
@@ -778,7 +778,7 @@ class AdvancedModifiableKeyStoreDecorator extends ModifiableKeyStoreDecorator {
             Integer keySize = KEY_SIZE.resolveModelAttribute(context, operation).asInt();
             ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier = null;
             if (CREDENTIAL_REFERENCE.resolveModelAttribute(context, operation).isDefined()) {
-                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, operation, null);
+                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, operation, null, operation);
             }
             char[] keyPassword = resolveKeyPassword(((KeyStoreService) keyStoreService), credentialSourceSupplier);
 

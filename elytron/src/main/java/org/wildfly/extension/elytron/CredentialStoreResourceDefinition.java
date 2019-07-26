@@ -18,6 +18,7 @@
 
 package org.wildfly.extension.elytron;
 
+import static org.jboss.as.controller.security.CredentialReference.updateCredentialReference;
 import static org.wildfly.extension.elytron.Capabilities.CREDENTIAL_STORE_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.CREDENTIAL_STORE_RUNTIME_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.PROVIDERS_CAPABILITY;
@@ -64,6 +65,7 @@ import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.as.controller.registry.OperationEntry;
 import org.jboss.as.controller.registry.Resource;
 import org.jboss.as.controller.security.CredentialReference;
+import org.jboss.as.controller.security.CredentialReferenceWriteAttributeHandler;
 import org.jboss.as.controller.services.path.PathManager;
 import org.jboss.as.controller.services.path.PathManagerService;
 import org.jboss.dmr.ModelNode;
@@ -220,7 +222,8 @@ final class CredentialStoreResourceDefinition extends SimpleResourceDefinition {
             .setRuntimeOnly()
             .build();
 
-    private static final AttributeDefinition[] CONFIG_ATTRIBUTES = new AttributeDefinition[] {LOCATION, CREATE, MODIFIABLE, IMPLEMENTATION_PROPERTIES, CREDENTIAL_REFERENCE, TYPE, PROVIDER_NAME, PROVIDERS, OTHER_PROVIDERS, RELATIVE_TO};
+    private static final AttributeDefinition[] CONFIG_ATTRIBUTES = new AttributeDefinition[] {LOCATION, CREATE, MODIFIABLE, IMPLEMENTATION_PROPERTIES, CREDENTIAL_REFERENCE_8_0, TYPE, PROVIDER_NAME, PROVIDERS, OTHER_PROVIDERS, RELATIVE_TO};
+    private static final AttributeDefinition[] CONFIG_ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE = new AttributeDefinition[] {LOCATION, CREATE, MODIFIABLE, IMPLEMENTATION_PROPERTIES, TYPE, PROVIDER_NAME, PROVIDERS, OTHER_PROVIDERS, RELATIVE_TO};
 
     private static final CredentialStoreAddHandler ADD = new CredentialStoreAddHandler();
     private static final OperationStepHandler REMOVE = new TrivialCapabilityServiceRemoveHandler(ADD, CREDENTIAL_STORE_RUNTIME_CAPABILITY);
@@ -238,10 +241,11 @@ final class CredentialStoreResourceDefinition extends SimpleResourceDefinition {
 
     @Override
     public void registerAttributes(ManagementResourceRegistration resourceRegistration) {
-        AbstractWriteAttributeHandler write = new ElytronReloadRequiredWriteAttributeHandler(CONFIG_ATTRIBUTES);
-        for (AttributeDefinition current : CONFIG_ATTRIBUTES) {
+        AbstractWriteAttributeHandler write = new ElytronReloadRequiredWriteAttributeHandler(CONFIG_ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE);
+        for (AttributeDefinition current : CONFIG_ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE) {
             resourceRegistration.registerReadWriteAttribute(current, null, write);
         }
+        resourceRegistration.registerReadWriteAttribute(CREDENTIAL_REFERENCE_8_0, null, new CredentialReferenceWriteAttributeHandler(CREDENTIAL_REFERENCE_8_0));
         if (isServerOrHostController(resourceRegistration)) {
             resourceRegistration.registerReadOnlyAttribute(STATE, new ElytronRuntimeOnlyHandler() {
 
@@ -274,6 +278,12 @@ final class CredentialStoreResourceDefinition extends SimpleResourceDefinition {
 
         private CredentialStoreAddHandler() {
             super(CREDENTIAL_STORE_RUNTIME_CAPABILITY, CONFIG_ATTRIBUTES);
+        }
+
+        @Override
+        protected void populateModel(ModelNode operation, ModelNode model) throws OperationFailedException {
+            super.populateModel(operation, model);
+            updateCredentialReference(model.get(CredentialReference.CREDENTIAL_REFERENCE));
         }
 
         @Override
@@ -334,7 +344,7 @@ final class CredentialStoreResourceDefinition extends SimpleResourceDefinition {
             }
 
             csService.getCredentialSourceSupplierInjector()
-                    .inject(CredentialReference.getCredentialSourceSupplier(context, CredentialStoreResourceDefinition.CREDENTIAL_REFERENCE_8_0, model, credentialStoreServiceBuilder));
+                    .inject(CredentialReference.getCredentialSourceSupplier(context, CredentialStoreResourceDefinition.CREDENTIAL_REFERENCE_8_0, model, credentialStoreServiceBuilder, operation));
 
             commonDependencies(credentialStoreServiceBuilder).install();
         }

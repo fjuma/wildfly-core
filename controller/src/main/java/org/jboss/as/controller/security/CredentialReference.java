@@ -622,6 +622,40 @@ public final class CredentialReference {
      *
      * @param context operation context
      * @param credentialReferenceAttributeDefinition credential-reference attribute definition
+     * @param operation the operation
+     * @param serviceBuilder of service which needs the credential
+     * @return ExceptionSupplier of CredentialSource
+     * @throws OperationFailedException wrapping exception when something goes wrong
+     */
+    /*public static ExceptionSupplier<CredentialSource, Exception> getCredentialSourceSupplierRuntimeOnly(OperationContext context, ObjectTypeAttributeDefinition credentialReferenceAttributeDefinition, ModelNode operation, ServiceBuilder<?> serviceBuilder) throws OperationFailedException {
+        ModelNode value = credentialReferenceAttributeDefinition.resolveModelAttribute(context, operation);
+        updateCredentialReference(value);
+        final String credentialStoreName;
+        final String credentialAlias;
+        final String credentialType;
+        final String secret;
+
+        if (value.isDefined()) {
+            credentialStoreName = credentialReferencePartAsStringIfDefined(value, CredentialReference.STORE);
+            credentialAlias = credentialReferencePartAsStringIfDefined(value, CredentialReference.ALIAS);
+            credentialType = credentialReferencePartAsStringIfDefined(value, CredentialReference.TYPE);
+            secret = credentialReferencePartAsStringIfDefined(operation.get(CREDENTIAL_REFERENCE), CredentialReference.CLEAR_TEXT);
+        } else {
+            credentialStoreName = null;
+            credentialAlias = null;
+            credentialType = null;
+            secret = null;
+        }
+
+        return getCredentialSourceSupplier(context, credentialReferenceAttributeDefinition, value, serviceBuilder, operation);
+    }*/
+
+    /**
+     * Get the ExceptionSupplier of {@link CredentialSource} which might throw an Exception while getting it.
+     * {@link CredentialSource} is used later to retrieve the credential requested by configuration.
+     *
+     * @param context operation context
+     * @param credentialReferenceAttributeDefinition credential-reference attribute definition
      * @param model containing the actual values
      * @param serviceBuilder of service which needs the credential
      * @param operation the operation
@@ -630,6 +664,10 @@ public final class CredentialReference {
      */
     public static ExceptionSupplier<CredentialSource, Exception> getCredentialSourceSupplier(OperationContext context, ObjectTypeAttributeDefinition credentialReferenceAttributeDefinition, ModelNode model, ServiceBuilder<?> serviceBuilder, ModelNode operation) throws OperationFailedException {
         ModelNode value = credentialReferenceAttributeDefinition.resolveModelAttribute(context, model);
+
+        if (serviceBuilder == null) {
+            updateCredentialReference(value);
+        }
 
         final String credentialStoreName;
         final String credentialAlias;
@@ -654,16 +692,24 @@ public final class CredentialReference {
             // use credential store service
             String credentialStoreCapabilityName = RuntimeCapability.buildDynamicCapabilityName(CREDENTIAL_STORE_CAPABILITY, credentialStoreName);
             credentialStoreServiceName = context.getCapabilityServiceName(credentialStoreCapabilityName, CredentialStore.class);
-            if(serviceBuilder != null) {
+
+            String parent = PathAddress.pathAddress(operation.get(ModelDescriptionConstants.ADDRESS)).getLastElement().getValue();
+            ServiceName credentialStoreUpdateServiceName = CredentialStoreUpdateService.createServiceName(parent, credentialStoreName);
+            if (serviceBuilder != null) {
                 serviceBuilder.requires(credentialStoreServiceName);
 
-                String parent = PathAddress.pathAddress(operation.get(ModelDescriptionConstants.ADDRESS)).getLastElement().getValue();
-                ServiceName credentialStoreUpdateServiceName = CredentialStoreUpdateService.createServiceName(parent, credentialStoreName);
                 CredentialStoreUpdateService credentialStoreUpdateService = new CredentialStoreUpdateService(credentialAlias, secret, context.getResult().get(CREDENTIAL_STORE_UPDATE));
                 ServiceBuilder<CredentialStoreUpdateService> credentialStoreUpdateServiceBuilder = context.getServiceTarget().addService(credentialStoreUpdateServiceName, credentialStoreUpdateService).setInitialMode(ServiceController.Mode.ACTIVE);
                 credentialStoreUpdateServiceBuilder.addDependency(context.getCapabilityServiceName(credentialStoreCapabilityName, CredentialStore.class), CredentialStore.class, credentialStoreUpdateService.getCredentialStoreInjector());
                 credentialStoreUpdateServiceBuilder.install();
                 serviceBuilder.requires(credentialStoreUpdateServiceName);
+            } else {
+                CredentialStoreUpdateService service = (CredentialStoreUpdateService) context.getServiceRegistry(true).getRequiredService(CredentialStoreUpdateService.createServiceName(parent, credentialStoreName)).getValue();
+                try {
+                    service.updateCredentialStore(credentialAlias, secret, context.getResult().get(CREDENTIAL_STORE_UPDATE));
+                } catch (CredentialStoreException e) {
+                    throw new OperationFailedException(e);
+                }
             }
             serviceRegistry = context.getServiceRegistry(false);
         } else {

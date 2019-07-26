@@ -18,6 +18,7 @@
 
 package org.wildfly.extension.elytron;
 
+import static org.jboss.as.controller.security.CredentialReference.updateCredentialReference;
 import static org.wildfly.extension.elytron.Capabilities.AUTHENTICATION_CONTEXT_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.DIR_CONTEXT_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.DIR_CONTEXT_RUNTIME_CAPABILITY;
@@ -46,6 +47,7 @@ import org.jboss.as.controller.operations.validation.EnumValidator;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.as.controller.registry.OperationEntry;
 import org.jboss.as.controller.security.CredentialReference;
+import org.jboss.as.controller.security.CredentialReferenceWriteAttributeHandler;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
 import org.jboss.dmr.Property;
@@ -146,6 +148,7 @@ class DirContextDefinition extends SimpleResourceDefinition {
 
     static final AttributeDefinition[] ATTRIBUTES = new AttributeDefinition[] {URL, AUTHENTICATION_LEVEL, PRINCIPAL, CREDENTIAL_REFERENCE, ENABLE_CONNECTION_POOLING, REFERRAL_MODE, AUTHENTICATION_CONTEXT, SSL_CONTEXT, CONNECTION_TIMEOUT, READ_TIMEOUT, PROPERTIES, MODULE};
     static final AttributeDefinition[] ATTRIBUTES_8_0 = new AttributeDefinition[] {URL, AUTHENTICATION_LEVEL, PRINCIPAL, CREDENTIAL_REFERENCE_8_0, ENABLE_CONNECTION_POOLING, REFERRAL_MODE, AUTHENTICATION_CONTEXT, SSL_CONTEXT, CONNECTION_TIMEOUT, READ_TIMEOUT, PROPERTIES, MODULE};
+    static final AttributeDefinition[] ATTRIBUTES_8_0_WITHOUT_CREDENTIAL_REFERENCE = new AttributeDefinition[] {URL, AUTHENTICATION_LEVEL, PRINCIPAL, ENABLE_CONNECTION_POOLING, REFERRAL_MODE, AUTHENTICATION_CONTEXT, SSL_CONTEXT, CONNECTION_TIMEOUT, READ_TIMEOUT, PROPERTIES, MODULE};
 
     DirContextDefinition() {
         super(new SimpleResourceDefinition.Parameters(PathElement.pathElement(ElytronDescriptionConstants.DIR_CONTEXT), ElytronExtension.getResourceDescriptionResolver(ElytronDescriptionConstants.DIR_CONTEXT))
@@ -158,10 +161,11 @@ class DirContextDefinition extends SimpleResourceDefinition {
 
     @Override
     public void registerAttributes(ManagementResourceRegistration resourceRegistration) {
-        AbstractWriteAttributeHandler handler = new ElytronReloadRequiredWriteAttributeHandler(ATTRIBUTES_8_0);
-        for (AttributeDefinition current : ATTRIBUTES_8_0) {
+        AbstractWriteAttributeHandler handler = new ElytronReloadRequiredWriteAttributeHandler(ATTRIBUTES_8_0_WITHOUT_CREDENTIAL_REFERENCE);
+        for (AttributeDefinition current : ATTRIBUTES_8_0_WITHOUT_CREDENTIAL_REFERENCE) {
             resourceRegistration.registerReadWriteAttribute(current, null, handler);
         }
+        resourceRegistration.registerReadWriteAttribute(CREDENTIAL_REFERENCE_8_0, null, new CredentialReferenceWriteAttributeHandler(CREDENTIAL_REFERENCE_8_0));
     }
 
     private static TrivialService.ValueSupplier<DirContextSupplier> obtainDirContextSupplier(final OperationContext context, final ModelNode model, final InjectedValue<ExceptionSupplier<CredentialSource, Exception>> credentialSourceSupplierInjector, final InjectedValue<AuthenticationContext> authenticationContextInjector, final InjectedValue<SSLContext> sslContextInjector) throws OperationFailedException {
@@ -233,6 +237,11 @@ class DirContextDefinition extends SimpleResourceDefinition {
     }
 
     private static final AbstractAddStepHandler ADD = new BaseAddHandler(DIR_CONTEXT_RUNTIME_CAPABILITY, ATTRIBUTES_8_0) {
+        protected void populateModel(ModelNode operation, ModelNode model) throws OperationFailedException {
+            super.populateModel(operation, model);
+            updateCredentialReference(model.get(CredentialReference.CREDENTIAL_REFERENCE));
+        }
+
         protected void performRuntime(final OperationContext context, final ModelNode operation, final ModelNode model) throws OperationFailedException {
 
             RuntimeCapability<Void> runtimeCapability = DIR_CONTEXT_RUNTIME_CAPABILITY.fromBaseCapability(context.getCurrentAddressValue());
@@ -253,7 +262,7 @@ class DirContextDefinition extends SimpleResourceDefinition {
             }
 
             if (CREDENTIAL_REFERENCE_8_0.resolveModelAttribute(context, model).isDefined()) {
-                credentialSourceSupplierInjector.inject(CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE_8_0, model, serviceBuilder));
+                credentialSourceSupplierInjector.inject(CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE_8_0, model, serviceBuilder, operation));
             }
 
             String authenticationContextName = AUTHENTICATION_CONTEXT.resolveModelAttribute(context, model).asStringOrNull();

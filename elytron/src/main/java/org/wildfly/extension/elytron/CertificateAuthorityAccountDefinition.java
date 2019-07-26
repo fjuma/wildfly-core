@@ -18,6 +18,7 @@
 
 package org.wildfly.extension.elytron;
 
+import static org.jboss.as.controller.security.CredentialReference.updateCredentialReference;
 import static org.wildfly.extension.elytron.AdvancedModifiableKeyStoreDecorator.resetAcmeAccount;
 import static org.wildfly.extension.elytron.Capabilities.CERTIFICATE_AUTHORITY_ACCOUNT_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.CERTIFICATE_AUTHORITY_ACCOUNT_RUNTIME_CAPABILITY;
@@ -57,6 +58,7 @@ import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.as.controller.registry.OperationEntry;
 import org.jboss.as.controller.registry.Resource;
 import org.jboss.as.controller.security.CredentialReference;
+import org.jboss.as.controller.security.CredentialReferenceWriteAttributeHandler;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
 import org.jboss.msc.service.ServiceBuilder;
@@ -119,6 +121,8 @@ class CertificateAuthorityAccountDefinition extends SimpleResourceDefinition {
 
     private static final AttributeDefinition[] ATTRIBUTES = new AttributeDefinition[] { CERTIFICATE_AUTHORITY, CONTACT_URLS, KEY_STORE, ALIAS, CREDENTIAL_REFERENCE_8_0 };
 
+    private static final AttributeDefinition[] ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE = new AttributeDefinition[] { CERTIFICATE_AUTHORITY, CONTACT_URLS, KEY_STORE, ALIAS };
+
     static final SimpleAttributeDefinition AGREE_TO_TERMS_OF_SERVICE = new SimpleAttributeDefinitionBuilder(ElytronDescriptionConstants.AGREE_TO_TERMS_OF_SERVICE, ModelType.BOOLEAN, false)
             .setAllowExpression(true)
             .build();
@@ -176,6 +180,12 @@ class CertificateAuthorityAccountDefinition extends SimpleResourceDefinition {
         }
 
         @Override
+        protected void populateModel(ModelNode operation, ModelNode model) throws OperationFailedException {
+            super.populateModel(operation, model);
+            updateCredentialReference(model.get(CredentialReference.CREDENTIAL_REFERENCE));
+        }
+
+        @Override
         protected void performRuntime(OperationContext context, ModelNode operation, Resource resource) throws OperationFailedException {
             ModelNode model = resource.getModel();
             String certificateAuthorityName = CERTIFICATE_AUTHORITY.resolveModelAttribute(context, model).asString();
@@ -183,7 +193,7 @@ class CertificateAuthorityAccountDefinition extends SimpleResourceDefinition {
             final String keyStoreName = KEY_STORE.resolveModelAttribute(context, model).asString();
             ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier = null;
             if (CREDENTIAL_REFERENCE_8_0.resolveModelAttribute(context, operation).isDefined()) {
-                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE_8_0, operation, null);
+                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE_8_0, operation, null, operation);
             }
             final List<ModelNode> contactUrls = CONTACT_URLS.resolveModelAttribute(context, model).asListOrEmpty();
             final List<String> contactUrlsList = new ArrayList<>(contactUrls.size());
@@ -211,7 +221,7 @@ class CertificateAuthorityAccountDefinition extends SimpleResourceDefinition {
 
     private static final OperationStepHandler REMOVE = new TrivialCapabilityServiceRemoveHandler(ADD, CERTIFICATE_AUTHORITY_ACCOUNT_RUNTIME_CAPABILITY);
 
-    private static final AbstractWriteAttributeHandler WRITE = new ElytronReloadRequiredWriteAttributeHandler(ATTRIBUTES);
+    private static final AbstractWriteAttributeHandler WRITE = new ElytronReloadRequiredWriteAttributeHandler(ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE);
 
     CertificateAuthorityAccountDefinition() {
         super(new Parameters(PathElement.pathElement(ElytronDescriptionConstants.CERTIFICATE_AUTHORITY_ACCOUNT), ElytronExtension.getResourceDescriptionResolver(ElytronDescriptionConstants.CERTIFICATE_AUTHORITY_ACCOUNT))
@@ -224,9 +234,10 @@ class CertificateAuthorityAccountDefinition extends SimpleResourceDefinition {
 
     @Override
     public void registerAttributes(ManagementResourceRegistration resourceRegistration) {
-        for (AttributeDefinition current : ATTRIBUTES) {
+        for (AttributeDefinition current : ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE) {
             resourceRegistration.registerReadWriteAttribute(current, null, WRITE);
         }
+        resourceRegistration.registerReadWriteAttribute(CREDENTIAL_REFERENCE_8_0, null, new CredentialReferenceWriteAttributeHandler(CREDENTIAL_REFERENCE_8_0));
     }
 
     @Override
