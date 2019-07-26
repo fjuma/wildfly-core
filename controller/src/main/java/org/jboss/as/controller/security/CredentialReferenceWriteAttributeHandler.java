@@ -63,12 +63,6 @@ public class CredentialReferenceWriteAttributeHandler extends ReloadRequiredWrit
             CredentialStoreUpdateService service = (CredentialStoreUpdateService) context.getServiceRegistry(true).getRequiredService(CredentialStoreUpdateService.createServiceName(parentName, credentialStoreName)).getValue();
             try {
                 service.updateCredentialStore(alias, secret, context.getResult().get(CREDENTIAL_STORE_UPDATE));
-                /*CredentialStoreUpdateService.CredentialStoreStatus status = service.getCredentialStoreStatus();
-                if (status == CredentialStoreUpdateService.CredentialStoreStatus.ENTRY_ADDED) {
-                    context.getResult().get(CREDENTIAL_STORE_UPDATE).set(NEW_ENTRY_ADDED);
-                } else if (status == CredentialStoreUpdateService.CredentialStoreStatus.ENTRY_UPDATED) {
-                    context.getResult().get(CREDENTIAL_STORE_UPDATE).set(EXISTING_ENTRY_UPDATED);
-                }*/
             } catch (CredentialStoreException e) {
                 throw new OperationFailedException(e);
             }

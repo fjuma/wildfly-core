@@ -17,8 +17,6 @@
  */
 package org.jboss.as.controller.security;
 
-import static org.jboss.as.controller.logging.ControllerLogger.ROOT_LOGGER;
-
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
@@ -666,15 +664,6 @@ public final class CredentialReference {
                 credentialStoreUpdateServiceBuilder.addDependency(context.getCapabilityServiceName(credentialStoreCapabilityName, CredentialStore.class), CredentialStore.class, credentialStoreUpdateService.getCredentialStoreInjector());
                 credentialStoreUpdateServiceBuilder.install();
                 serviceBuilder.requires(credentialStoreUpdateServiceName);
-                /*context.addStep((OperationContext context1, ModelNode operation1) -> {
-                    CredentialStoreUpdateService service = (CredentialStoreUpdateService) context1.getServiceRegistry(true).getRequiredService(CredentialStoreUpdateService.createServiceName(parent, credentialStoreName)).getValue();
-                    CredentialStoreUpdateService.CredentialStoreStatus status = service.getCredentialStoreStatus();
-                    if (status == CredentialStoreUpdateService.CredentialStoreStatus.ENTRY_ADDED) {
-                        context1.getResult().get(CREDENTIAL_STORE_UPDATE).set(NEW_ENTRY_ADDED);
-                    } else if (status == CredentialStoreUpdateService.CredentialStoreStatus.ENTRY_UPDATED) {
-                        context1.getResult().get(CREDENTIAL_STORE_UPDATE).set(EXISTING_ENTRY_UPDATED);
-                    }
-                }, OperationContext.Stage.RUNTIME, true);*/
             }
             serviceRegistry = context.getServiceRegistry(false);
         } else {
@@ -788,15 +777,6 @@ public final class CredentialReference {
                 }
             }
         };
-    }
-
-    static CredentialStore getCredentialStore(ServiceRegistry serviceRegistry, ServiceName credentialStoreServiceName) throws OperationFailedException {
-        ServiceController<CredentialStore> controller = getRequiredService(serviceRegistry, credentialStoreServiceName, CredentialStore.class);
-        ServiceController.State serviceState = controller.getState();
-        if (serviceState != ServiceController.State.UP) {
-            throw ROOT_LOGGER.requiredServiceNotUp(credentialStoreServiceName, serviceState);
-        }
-        return controller.getService().getValue();
     }
 
     static <T> ServiceController<T> getRequiredService(ServiceRegistry serviceRegistry, ServiceName serviceName, Class<T> serviceType) {
