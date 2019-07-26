@@ -20,7 +20,9 @@
 package org.jboss.as.controller.security;
 
 import static org.jboss.as.controller.security.CredentialReference.EXISTING_ENTRY_UPDATED;
+import static org.jboss.as.controller.security.CredentialReference.NEW_ALIAS;
 import static org.jboss.as.controller.security.CredentialReference.NEW_ENTRY_ADDED;
+import static org.jboss.as.controller.security.CredentialReference.STATUS;
 
 import org.jboss.dmr.ModelNode;
 import org.jboss.msc.inject.Injector;
@@ -87,11 +89,10 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
             boolean exists = credentialStore.exists(alias, PasswordCredential.class);
             CredentialReference.storeSecret(credentialStore, alias, secret);
             if (exists) {
-                //result.get(CREDENTIAL_STORE_UPDATE)
-                result.set(EXISTING_ENTRY_UPDATED);
+                result.get(STATUS).set(EXISTING_ENTRY_UPDATED);
             } else {
-                //result.get(CREDENTIAL_STORE_UPDATE)
-                result.set(NEW_ENTRY_ADDED);
+                result.get(STATUS).set(NEW_ENTRY_ADDED);
+                result.get(NEW_ALIAS).set(alias);
             }
         }
     }
@@ -103,9 +104,5 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
     public static ServiceName createServiceName(String parentName, String credentialStoreName) {
         return ServiceName.of("org", "wildfly", "security", "elytron").append("credential-store-update", parentName + "-" + credentialStoreName);
     }
-
-    /*public CredentialStoreStatus getCredentialStoreStatus () {
-        return credentialStoreStatus;
-    }*/
 
 }
