@@ -103,15 +103,15 @@ public class SyslogAuditLogHandlerService implements Service, SyslogCredentialRe
                 final ModelNode storeModel = storeEntry.getModel();
                 String type = storeEntry.getPathElement().getValue();
                 if (type.equals(CLIENT_CERT_STORE)) {
-                    if (storeModel.hasDefined(TlsKeyStore.KEY_PASSWORD_CREDENTIAL_REFERENCE.getName())) {
-                        tccskcsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEY_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder);
+                    if (storeModel.hasDefined(TlsKeyStore.KEY_PASSWORD_CREDENTIAL_REFERENCE_VERSION.getName())) {
+                        tccskcsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEY_PASSWORD_CREDENTIAL_REFERENCE_VERSION, storeModel, serviceBuilder);
                     }
-                    if (storeModel.hasDefined(TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE.getName())) {
-                        tccscsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder);
+                    if (storeModel.hasDefined(TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_VERSION.getName())) {
+                        tccscsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_VERSION, storeModel, serviceBuilder);
                     }
                 } else if (type.equals(TRUSTSTORE)) {
-                    if (storeModel.hasDefined(TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE.getName())) {
-                        ttsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, storeModel, serviceBuilder);
+                    if (storeModel.hasDefined(TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_VERSION.getName())) {
+                        ttsSupplier = CredentialReference.getCredentialSourceSupplier(context, TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_VERSION, storeModel, serviceBuilder);
                     }
                 }
             }

@@ -832,8 +832,8 @@ final class AuditLogXml_5 implements AuditLogXml {
             SyslogAuditLogProtocolResourceDefinition.Tls.TlsKeyStore.KEYSTORE_RELATIVE_TO.marshallAsAttribute(keystore, writer);
             SyslogAuditLogProtocolResourceDefinition.Tls.TlsKeyStore.KEYSTORE_PASSWORD.marshallAsAttribute(keystore, writer);
             SyslogAuditLogProtocolResourceDefinition.Tls.TlsKeyStore.KEY_PASSWORD.marshallAsAttribute(keystore, writer);
-            SyslogAuditLogProtocolResourceDefinition.Tls.TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE.marshallAsElement(keystore, writer);
-            SyslogAuditLogProtocolResourceDefinition.Tls.TlsKeyStore.KEY_PASSWORD_CREDENTIAL_REFERENCE.marshallAsElement(keystore, writer);
+            SyslogAuditLogProtocolResourceDefinition.Tls.TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_VERSION.marshallAsElement(keystore, writer);
+            SyslogAuditLogProtocolResourceDefinition.Tls.TlsKeyStore.KEY_PASSWORD_CREDENTIAL_REFERENCE_VERSION.marshallAsElement(keystore, writer);
             writer.writeEndElement();
         }
     }

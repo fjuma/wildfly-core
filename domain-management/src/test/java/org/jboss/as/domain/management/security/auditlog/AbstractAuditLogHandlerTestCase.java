@@ -387,7 +387,7 @@ public class AbstractAuditLogHandlerTestCase extends ManagementControllerTestBas
         truststore.get(SyslogAuditLogProtocolResourceDefinition.TlsKeyStore.KEYSTORE_PATH.getName()).set(truststorePath.getAbsolutePath());
         ModelNode trustStoreCredentialRef = new ModelNode();
         trustStoreCredentialRef.get(CLEAR_TEXT).set(trustPwd);
-        truststore.get(SyslogAuditLogProtocolResourceDefinition.TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE.getName()).set(trustStoreCredentialRef);
+        truststore.get(SyslogAuditLogProtocolResourceDefinition.TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_VERSION.getName()).set(trustStoreCredentialRef);
         composite.get(STEPS).add(truststore);
 
         if (clientCertPath != null) {
@@ -396,7 +396,7 @@ public class AbstractAuditLogHandlerTestCase extends ManagementControllerTestBas
             clientCert.get(SyslogAuditLogProtocolResourceDefinition.TlsKeyStore.KEYSTORE_PATH.getName()).set(clientCertPath.getAbsolutePath());
             ModelNode clientCertCredentialRef = new ModelNode();
             clientCertCredentialRef.get(CLEAR_TEXT).set(clientCertPwd);
-            clientCert.get(SyslogAuditLogProtocolResourceDefinition.TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE.getName()).set(clientCertCredentialRef);
+            clientCert.get(SyslogAuditLogProtocolResourceDefinition.TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_VERSION.getName()).set(clientCertCredentialRef);
             composite.get(STEPS).add(clientCert);
         }
         return composite;
