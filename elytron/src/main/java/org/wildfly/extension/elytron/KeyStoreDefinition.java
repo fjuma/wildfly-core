@@ -287,7 +287,7 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
             }
 
             keyStoreService.getCredentialSourceSupplierInjector()
-                    .inject(CredentialReference.getCredentialSourceSupplier(context, KeyStoreDefinition.CREDENTIAL_REFERENCE, model, serviceBuilder, operation));
+                    .inject(CredentialReference.getCredentialSourceSupplier(context, KeyStoreDefinition.CREDENTIAL_REFERENCE, model, serviceBuilder));
 
             commonDependencies(serviceBuilder).install();
         }

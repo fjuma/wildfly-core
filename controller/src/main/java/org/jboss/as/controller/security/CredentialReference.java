@@ -32,12 +32,10 @@ import org.jboss.as.controller.ObjectTypeAttributeDefinition;
 import org.jboss.as.controller.OperationContext;
 //import org.jboss.as.controller.OperationContextImpl;
 import org.jboss.as.controller.OperationFailedException;
-import org.jboss.as.controller.PathAddress;
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
 import org.jboss.as.controller.access.management.SensitiveTargetAccessConstraintDefinition;
 import org.jboss.as.controller.capability.RuntimeCapability;
-import org.jboss.as.controller.descriptions.ModelDescriptionConstants;
 import org.jboss.as.controller.logging.ControllerLogger;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
@@ -100,8 +98,6 @@ public final class CredentialReference {
      */
     public static final String CLEAR_TEXT = "clear-text";
 
-    public static final String ACTUAL_CLEAR_TEXT = "actual-clear-text";
-
     public static final String CREDENTIAL_STORE_UPDATE = "credential-store-update";
     public static final String STATUS = "status";
     public static final String NEW_ENTRY_ADDED = "new-entry-added";
@@ -116,7 +112,6 @@ public final class CredentialReference {
     private static final SimpleAttributeDefinition credentialTypeAttribute;
     private static final SimpleAttributeDefinition clearTextAttribute;
     private static final SimpleAttributeDefinition clearTextAttribute_1_0;
-    private static final SimpleAttributeDefinition actualClearTextAttribute;
 
     /** A variant that has a default capability reference configured for the attribute */
     private static final SimpleAttributeDefinition credentialStoreAttributeWithCapabilityReference_1_0;
@@ -144,10 +139,6 @@ public final class CredentialReference {
                 .setXmlName(CLEAR_TEXT)
                 .setAllowExpression(true)
                 .setAlternatives(STORE)
-                .build();
-
-        actualClearTextAttribute = new SimpleAttributeDefinitionBuilder(ACTUAL_CLEAR_TEXT, ModelType.STRING, true)
-                .setStorageRuntime()
                 .build();
 
         // both clear-text and store allowed
@@ -447,7 +438,7 @@ public final class CredentialReference {
 
     private static ObjectTypeAttributeDefinition.Builder getAttributeBuilder(String name, String xmlName, boolean allowNull, AttributeDefinition credentialStoreDefinition, Version version) {
         return new ObjectTypeAttributeDefinition.Builder(name, credentialStoreDefinition, credentialAliasAttribute, credentialTypeAttribute,
-                version == Version.VERSION_1_0 ? clearTextAttribute_1_0 : clearTextAttribute, actualClearTextAttribute)
+                version == Version.VERSION_1_0 ? clearTextAttribute_1_0 : clearTextAttribute)
                 .setXmlName(xmlName)
                 .setAttributeMarshaller(AttributeMarshaller.ATTRIBUTE_OBJECT)
                 .setAttributeParser(AttributeParser.OBJECT_PARSER)
@@ -485,7 +476,7 @@ public final class CredentialReference {
      * @return ExceptionSupplier of CredentialSource
      * @throws OperationFailedException wrapping exception when something goes wrong
      */
-    public static ExceptionSupplier<CredentialSource, Exception> getCredentialSourceSupplier(OperationContext context, ObjectTypeAttributeDefinition credentialReferenceAttributeDefinition, ModelNode model, ServiceBuilder<?> serviceBuilder) throws OperationFailedException {
+    /*public static ExceptionSupplier<CredentialSource, Exception> getCredentialSourceSupplier(OperationContext context, ObjectTypeAttributeDefinition credentialReferenceAttributeDefinition, ModelNode model, ServiceBuilder<?> serviceBuilder) throws OperationFailedException {
         ModelNode value = credentialReferenceAttributeDefinition.resolveModelAttribute(context, model);
 
         final String credentialStoreName;
@@ -536,14 +527,14 @@ public final class CredentialReference {
                 StringTokenizer tokenizer = new StringTokenizer(commandSpec, "{}");
                 tokenizer.nextToken();
                 return tokenizer.nextToken();
-            }
+            }*/
 
             /**
              * Gets a Credential Store Supplier.
              *
              * @return a supplier
              */
-            @Override
+            /*@Override
             public CredentialSource get() throws Exception {
                 if (credentialAlias != null) {
                     return new CredentialStoreCredentialSource(
@@ -626,7 +617,7 @@ public final class CredentialReference {
                 }
             }
         };
-    }
+    }*/
 
     /**
      * Get the ExceptionSupplier of {@link CredentialSource} which might throw an Exception while getting it.
@@ -670,11 +661,10 @@ public final class CredentialReference {
      * @param credentialReferenceAttributeDefinition credential-reference attribute definition
      * @param model containing the actual values
      * @param serviceBuilder of service which needs the credential
-     * @param operation the operation
      * @return ExceptionSupplier of CredentialSource
      * @throws OperationFailedException wrapping exception when something goes wrong
      */
-    public static ExceptionSupplier<CredentialSource, Exception> getCredentialSourceSupplier(OperationContext context, ObjectTypeAttributeDefinition credentialReferenceAttributeDefinition, ModelNode model, ServiceBuilder<?> serviceBuilder, ModelNode operation) throws OperationFailedException {
+    public static ExceptionSupplier<CredentialSource, Exception> getCredentialSourceSupplier(OperationContext context, ObjectTypeAttributeDefinition credentialReferenceAttributeDefinition, ModelNode model, ServiceBuilder<?> serviceBuilder) throws OperationFailedException {
         ModelNode value = credentialReferenceAttributeDefinition.resolveModelAttribute(context, model);
 
         if (serviceBuilder == null) {
@@ -708,7 +698,8 @@ public final class CredentialReference {
             String credentialStoreCapabilityName = RuntimeCapability.buildDynamicCapabilityName(CREDENTIAL_STORE_CAPABILITY, credentialStoreName);
             credentialStoreServiceName = context.getCapabilityServiceName(credentialStoreCapabilityName, CredentialStore.class);
 
-            String parent = PathAddress.pathAddress(operation.get(ModelDescriptionConstants.ADDRESS)).getLastElement().getValue();
+            //String parent = PathAddress.pathAddress(operation.get(ModelDescriptionConstants.ADDRESS)).getLastElement().getValue();
+            String parent = context.getCurrentAddress().getLastElement().getValue();
             ServiceName credentialStoreUpdateServiceName = CredentialStoreUpdateService.createServiceName(parent, credentialStoreName);
             if (serviceBuilder != null) {
                 serviceBuilder.requires(credentialStoreServiceName);

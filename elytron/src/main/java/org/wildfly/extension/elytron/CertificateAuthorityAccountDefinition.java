@@ -189,7 +189,7 @@ class CertificateAuthorityAccountDefinition extends SimpleResourceDefinition {
             final String keyStoreName = KEY_STORE.resolveModelAttribute(context, model).asString();
             ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier = null;
             if (CREDENTIAL_REFERENCE.resolveModelAttribute(context, operation).isDefined()) {
-                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, operation, null, operation);
+                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, operation, null);
             }
             final List<ModelNode> contactUrls = CONTACT_URLS.resolveModelAttribute(context, model).asListOrEmpty();
             final List<String> contactUrlsList = new ArrayList<>(contactUrls.size());

@@ -258,7 +258,7 @@ class DirContextDefinition extends SimpleResourceDefinition {
             }
 
             if (CREDENTIAL_REFERENCE.resolveModelAttribute(context, model).isDefined()) {
-                credentialSourceSupplierInjector.inject(CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, model, serviceBuilder, operation));
+                credentialSourceSupplierInjector.inject(CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, model, serviceBuilder));
             }
 
             String authenticationContextName = AUTHENTICATION_CONTEXT.resolveModelAttribute(context, model).asStringOrNull();

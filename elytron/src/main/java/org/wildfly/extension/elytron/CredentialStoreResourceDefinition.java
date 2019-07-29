@@ -342,7 +342,7 @@ final class CredentialStoreResourceDefinition extends SimpleResourceDefinition {
             }
 
             csService.getCredentialSourceSupplierInjector()
-                    .inject(CredentialReference.getCredentialSourceSupplier(context, CredentialStoreResourceDefinition.CREDENTIAL_REFERENCE, model, credentialStoreServiceBuilder, operation));
+                    .inject(CredentialReference.getCredentialSourceSupplier(context, CredentialStoreResourceDefinition.CREDENTIAL_REFERENCE, model, credentialStoreServiceBuilder));
 
             commonDependencies(credentialStoreServiceBuilder).install();
         }
