@@ -85,23 +85,11 @@ class TlsParser {
             .addAttribute(SSLDefinitions.PROVIDER_NAME)
             .addAttribute(CredentialReference.getAttributeDefinition());
 
-    // for 1.0 version of credential-reference
     private PersistentResourceXMLBuilder keyStoreParser = PersistentResourceXMLDescription.builder(PathElement.pathElement(KEY_STORE))
             .addAttribute(KeyStoreDefinition.TYPE)
             .addAttribute(KeyStoreDefinition.PROVIDER_NAME)
             .addAttribute(KeyStoreDefinition.PROVIDERS)
             .addAttribute(KeyStoreDefinition.CREDENTIAL_REFERENCE)
-            .addAttribute(KeyStoreDefinition.ALIAS_FILTER)
-            .addAttribute(KeyStoreDefinition.REQUIRED)
-            .addAttribute(FileAttributeDefinitions.PATH)
-            .addAttribute(FileAttributeDefinitions.RELATIVE_TO)
-            .addAttribute(CredentialReference.getAttributeDefinition(CredentialReference.Version.VERSION_1_0));
-
-    private PersistentResourceXMLBuilder keyStoreParser_8_0 = PersistentResourceXMLDescription.builder(PathElement.pathElement(KEY_STORE))
-            .addAttribute(KeyStoreDefinition.TYPE)
-            .addAttribute(KeyStoreDefinition.PROVIDER_NAME)
-            .addAttribute(KeyStoreDefinition.PROVIDERS)
-            .addAttribute(KeyStoreDefinition.CREDENTIAL_REFERENCE_8_0)
             .addAttribute(KeyStoreDefinition.ALIAS_FILTER)
             .addAttribute(KeyStoreDefinition.REQUIRED)
             .addAttribute(FileAttributeDefinitions.PATH)
@@ -196,14 +184,6 @@ class TlsParser {
             .addAttribute(CertificateAuthorityAccountDefinition.ALIAS)
             .addAttribute(CertificateAuthorityAccountDefinition.CREDENTIAL_REFERENCE);
 
-    private PersistentResourceXMLBuilder certificateAuthorityAccountParser_8_0 = PersistentResourceXMLDescription.builder(PathElement.pathElement(CERTIFICATE_AUTHORITY_ACCOUNT))
-            .setXmlWrapperElement(CERTIFICATE_AUTHORITY_ACCOUNTS)
-            .addAttribute(CertificateAuthorityAccountDefinition.CERTIFICATE_AUTHORITY)
-            .addAttribute(CertificateAuthorityAccountDefinition.CONTACT_URLS)
-            .addAttribute(CertificateAuthorityAccountDefinition.KEY_STORE)
-            .addAttribute(CertificateAuthorityAccountDefinition.ALIAS)
-            .addAttribute(CertificateAuthorityAccountDefinition.CREDENTIAL_REFERENCE_8_0);
-
     private PersistentResourceXMLBuilder serverSslSniContextParser = PersistentResourceXMLDescription.builder(PathElement.pathElement(SERVER_SSL_SNI_CONTEXT))
             .setXmlWrapperElement(SERVER_SSL_SNI_CONTEXTS)
             .addAttribute(SSLDefinitions.DEFAULT_SSL_CONTEXT)
@@ -270,7 +250,7 @@ class TlsParser {
 
     final PersistentResourceXMLDescription tlsParser_8_0 = decorator(TLS)
             .addChild(decorator(KEY_STORES)
-                    .addChild(keyStoreParser_8_0) // credential-reference supports both store and clear-text password
+                    .addChild(keyStoreParser) // credential-reference supports both store and clear-text password
                     .addChild(ldapKeyStoreParser)
                     .addChild(filteringKeyStoreParser)
             )
@@ -279,7 +259,7 @@ class TlsParser {
             .addChild(serverSslContextParser)
             .addChild(clientSslContextParser)
             .addChild(certificateAuthorityParser) // new
-            .addChild(certificateAuthorityAccountParser_8_0) // credential-reference supports both store and clear-text password
+            .addChild(certificateAuthorityAccountParser)
             .addChild(serverSslSniContextParser)
             .build();
 }

@@ -45,7 +45,7 @@ class AuthenticationClientParser {
     private final PersistentResourceXMLDescription authenticationConfigurationParser_8_0 = builder(PathElement.pathElement(AUTHENTICATION_CONFIGURATION), null)
             .addAttributes(AuthenticationClientDefinitions.AUTHENTICATION_CONFIGURATION_SIMPLE_ATTRIBUTES)
             .addAttribute(AuthenticationClientDefinitions.MECHANISM_PROPERTIES, AttributeParser.PROPERTIES_PARSER, AttributeMarshaller.PROPERTIES_MARSHALLER)
-            .addAttribute(AuthenticationClientDefinitions.CREDENTIAL_REFERENCE_8_0, AuthenticationClientDefinitions.CREDENTIAL_REFERENCE_8_0.getParser(), AuthenticationClientDefinitions.CREDENTIAL_REFERENCE_8_0.getMarshaller())
+            .addAttribute(AuthenticationClientDefinitions.CREDENTIAL_REFERENCE, AuthenticationClientDefinitions.CREDENTIAL_REFERENCE.getParser(), AuthenticationClientDefinitions.CREDENTIAL_REFERENCE.getMarshaller())
             .build();
 
     private final PersistentResourceXMLDescription authenticationContextParser = builder(PathElement.pathElement(AUTHENTICATION_CONTEXT), null)

@@ -29,7 +29,6 @@ import org.jboss.as.controller.PersistentResourceXMLDescription;
  */
 class CredentialStoreParser {
 
-    // for 1.0 version of credential-reference
     final PersistentResourceXMLDescription parser = builder(PathElement.pathElement(ElytronDescriptionConstants.CREDENTIAL_STORE))
             .setUseElementsForGroups(false)
             .addAttribute(CredentialStoreResourceDefinition.TYPE)
@@ -42,20 +41,6 @@ class CredentialStoreParser {
             .addAttribute(CredentialStoreResourceDefinition.CREATE)
             .addAttribute(CredentialStoreResourceDefinition.IMPLEMENTATION_PROPERTIES)
             .addAttribute(CredentialStoreResourceDefinition.CREDENTIAL_REFERENCE)
-            .build();
-
-    final PersistentResourceXMLDescription parser_8_0 = builder(PathElement.pathElement(ElytronDescriptionConstants.CREDENTIAL_STORE))
-            .setUseElementsForGroups(false)
-            .addAttribute(CredentialStoreResourceDefinition.TYPE)
-            .addAttribute(CredentialStoreResourceDefinition.PROVIDER_NAME)
-            .addAttribute(CredentialStoreResourceDefinition.PROVIDERS)
-            .addAttribute(CredentialStoreResourceDefinition.OTHER_PROVIDERS)
-            .addAttribute(CredentialStoreResourceDefinition.RELATIVE_TO)
-            .addAttribute(CredentialStoreResourceDefinition.LOCATION)
-            .addAttribute(CredentialStoreResourceDefinition.MODIFIABLE)
-            .addAttribute(CredentialStoreResourceDefinition.CREATE)
-            .addAttribute(CredentialStoreResourceDefinition.IMPLEMENTATION_PROPERTIES)
-            .addAttribute(CredentialStoreResourceDefinition.CREDENTIAL_REFERENCE_8_0)
             .build();
 
 

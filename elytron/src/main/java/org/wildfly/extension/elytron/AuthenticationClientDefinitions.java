@@ -18,6 +18,7 @@
 
 package org.wildfly.extension.elytron;
 
+import static org.jboss.as.controller.security.CredentialReference.updateCredentialReference;
 import static org.wildfly.common.Assert.checkNotNullParam;
 import static org.wildfly.extension.elytron.Capabilities.AUTHENTICATION_CONFIGURATION_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.AUTHENTICATION_CONFIGURATION_RUNTIME_CAPABILITY;
@@ -36,6 +37,7 @@ import java.util.function.Supplier;
 
 import javax.net.ssl.SSLContext;
 
+import org.jboss.as.controller.AbstractWriteAttributeHandler;
 import org.jboss.as.controller.AttributeDefinition;
 import org.jboss.as.controller.ObjectListAttributeDefinition;
 import org.jboss.as.controller.ObjectTypeAttributeDefinition;
@@ -48,7 +50,10 @@ import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
 import org.jboss.as.controller.capability.RuntimeCapability;
 import org.jboss.as.controller.operations.validation.StringAllowedValuesValidator;
 import org.jboss.as.controller.registry.AttributeAccess;
+import org.jboss.as.controller.registry.ManagementResourceRegistration;
+import org.jboss.as.controller.registry.Resource;
 import org.jboss.as.controller.security.CredentialReference;
+import org.jboss.as.controller.security.CredentialReferenceWriteAttributeHandler;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
 import org.jboss.msc.service.ServiceBuilder;
@@ -144,12 +149,7 @@ class AuthenticationClientDefinitions {
             .setRestartAllServices()
             .build();
 
-    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE = CredentialReference.getAttributeBuilder(true, true,
-            CredentialReference.Version.VERSION_1_0)
-            .setRestartAllServices()
-            .build();
-
-    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE_8_0 = CredentialReference.getAttributeBuilder(true, true)
+    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE = CredentialReference.getAttributeBuilder(true, true)
             .setRestartAllServices()
             .build();
 
@@ -163,7 +163,10 @@ class AuthenticationClientDefinitions {
             PORT, REALM, SECURITY_DOMAIN, FORWARDING_MODE, SASL_MECHANISM_SELECTOR, KERBEROS_SECURITY_FACTORY };
 
     static final AttributeDefinition[] AUTHENTICATION_CONFIGURATION_ALL_ATTRIBUTES = new AttributeDefinition[] { CONFIGURATION_EXTENDS, ANONYMOUS, AUTHENTICATION_NAME, AUTHORIZATION_NAME, HOST, PROTOCOL,
-            PORT, REALM, SECURITY_DOMAIN, FORWARDING_MODE, KERBEROS_SECURITY_FACTORY, SASL_MECHANISM_SELECTOR, MECHANISM_PROPERTIES, CREDENTIAL_REFERENCE_8_0 };
+            PORT, REALM, SECURITY_DOMAIN, FORWARDING_MODE, KERBEROS_SECURITY_FACTORY, SASL_MECHANISM_SELECTOR, MECHANISM_PROPERTIES, CREDENTIAL_REFERENCE};
+
+    static final AttributeDefinition[] AUTHENTICATION_CONFIGURATION_ALL_ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE = new AttributeDefinition[] { CONFIGURATION_EXTENDS, ANONYMOUS, AUTHENTICATION_NAME, AUTHORIZATION_NAME, HOST, PROTOCOL,
+            PORT, REALM, SECURITY_DOMAIN, FORWARDING_MODE, KERBEROS_SECURITY_FACTORY, SASL_MECHANISM_SELECTOR, MECHANISM_PROPERTIES};
 
     /* *************************************** */
     /* Authentication Context Attributes */
@@ -252,6 +255,13 @@ class AuthenticationClientDefinitions {
                 AUTHENTICATION_CONFIGURATION_RUNTIME_CAPABILITY) {
 
             @Override
+            protected void populateModel(final OperationContext context, final ModelNode operation, final Resource resource) throws  OperationFailedException {
+                super.populateModel(context, operation, resource);
+                final ModelNode model = resource.getModel();
+                updateCredentialReference(context, model.get(CredentialReference.CREDENTIAL_REFERENCE));
+            }
+
+            @Override
             protected ValueSupplier<AuthenticationConfiguration> getValueSupplier(
                     ServiceBuilder<AuthenticationConfiguration> serviceBuilder, OperationContext context, ModelNode model)
                     throws OperationFailedException {
@@ -327,10 +337,10 @@ class AuthenticationClientDefinitions {
                     configuration = configuration.andThen(c -> c.useMechanismProperties(propertiesMap, parent == null));
                 }
 
-                ModelNode credentialReference = CREDENTIAL_REFERENCE_8_0.resolveModelAttribute(context, model);
+                ModelNode credentialReference = CREDENTIAL_REFERENCE.resolveModelAttribute(context, model);
                 if (credentialReference.isDefined()) {
                     final InjectedValue<ExceptionSupplier<CredentialSource, Exception>> credentialSourceSupplierInjector = new InjectedValue<>();
-                    credentialSourceSupplierInjector.inject(CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE_8_0, model, serviceBuilder));
+                    credentialSourceSupplierInjector.inject(CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, model, serviceBuilder));
                     configuration = configuration.andThen(c -> {
                         ExceptionSupplier<CredentialSource, Exception> sourceSupplier = credentialSourceSupplierInjector
                                 .getValue();
@@ -374,7 +384,17 @@ class AuthenticationClientDefinitions {
                 return securityDomainInjector;
             }
         };
-        return new TrivialResourceDefinition(ElytronDescriptionConstants.AUTHENTICATION_CONFIGURATION, add, AUTHENTICATION_CONFIGURATION_ALL_ATTRIBUTES, AUTHENTICATION_CONFIGURATION_RUNTIME_CAPABILITY);
+        return new TrivialResourceDefinition(ElytronDescriptionConstants.AUTHENTICATION_CONFIGURATION, add, AUTHENTICATION_CONFIGURATION_ALL_ATTRIBUTES, AUTHENTICATION_CONFIGURATION_RUNTIME_CAPABILITY) {
+
+            @Override
+            public void registerAttributes(ManagementResourceRegistration resourceRegistration) {
+                AbstractWriteAttributeHandler writeHandler = new ElytronReloadRequiredWriteAttributeHandler(AUTHENTICATION_CONFIGURATION_ALL_ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE);
+                for (AttributeDefinition current : AUTHENTICATION_CONFIGURATION_ALL_ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE) {
+                    resourceRegistration.registerReadWriteAttribute(current, null, writeHandler);
+                }
+                resourceRegistration.registerReadWriteAttribute(CREDENTIAL_REFERENCE, null, new CredentialReferenceWriteAttributeHandler(CREDENTIAL_REFERENCE));
+            }
+        };
     }
 
     static ResourceDefinition getAuthenticationContextDefinition() {

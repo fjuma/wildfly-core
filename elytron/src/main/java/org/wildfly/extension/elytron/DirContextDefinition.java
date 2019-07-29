@@ -46,6 +46,7 @@ import org.jboss.as.controller.capability.RuntimeCapability;
 import org.jboss.as.controller.operations.validation.EnumValidator;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.as.controller.registry.OperationEntry;
+import org.jboss.as.controller.registry.Resource;
 import org.jboss.as.controller.security.CredentialReference;
 import org.jboss.as.controller.security.CredentialReferenceWriteAttributeHandler;
 import org.jboss.dmr.ModelNode;
@@ -94,11 +95,6 @@ class DirContextDefinition extends SimpleResourceDefinition {
             .build();
 
     static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE =
-            CredentialReference.getAttributeBuilder(true, true, CredentialReference.Version.VERSION_1_0)
-                    .setAlternatives(ElytronDescriptionConstants.AUTHENTICATION_CONTEXT)
-                    .build();
-
-    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE_8_0 =
             CredentialReference.getAttributeBuilder(true, true)
                     .setAlternatives(ElytronDescriptionConstants.AUTHENTICATION_CONTEXT)
                     .build();
@@ -147,8 +143,7 @@ class DirContextDefinition extends SimpleResourceDefinition {
             .build();
 
     static final AttributeDefinition[] ATTRIBUTES = new AttributeDefinition[] {URL, AUTHENTICATION_LEVEL, PRINCIPAL, CREDENTIAL_REFERENCE, ENABLE_CONNECTION_POOLING, REFERRAL_MODE, AUTHENTICATION_CONTEXT, SSL_CONTEXT, CONNECTION_TIMEOUT, READ_TIMEOUT, PROPERTIES, MODULE};
-    static final AttributeDefinition[] ATTRIBUTES_8_0 = new AttributeDefinition[] {URL, AUTHENTICATION_LEVEL, PRINCIPAL, CREDENTIAL_REFERENCE_8_0, ENABLE_CONNECTION_POOLING, REFERRAL_MODE, AUTHENTICATION_CONTEXT, SSL_CONTEXT, CONNECTION_TIMEOUT, READ_TIMEOUT, PROPERTIES, MODULE};
-    static final AttributeDefinition[] ATTRIBUTES_8_0_WITHOUT_CREDENTIAL_REFERENCE = new AttributeDefinition[] {URL, AUTHENTICATION_LEVEL, PRINCIPAL, ENABLE_CONNECTION_POOLING, REFERRAL_MODE, AUTHENTICATION_CONTEXT, SSL_CONTEXT, CONNECTION_TIMEOUT, READ_TIMEOUT, PROPERTIES, MODULE};
+    static final AttributeDefinition[] ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE = new AttributeDefinition[] {URL, AUTHENTICATION_LEVEL, PRINCIPAL, ENABLE_CONNECTION_POOLING, REFERRAL_MODE, AUTHENTICATION_CONTEXT, SSL_CONTEXT, CONNECTION_TIMEOUT, READ_TIMEOUT, PROPERTIES, MODULE};
 
     DirContextDefinition() {
         super(new SimpleResourceDefinition.Parameters(PathElement.pathElement(ElytronDescriptionConstants.DIR_CONTEXT), ElytronExtension.getResourceDescriptionResolver(ElytronDescriptionConstants.DIR_CONTEXT))
@@ -161,11 +156,11 @@ class DirContextDefinition extends SimpleResourceDefinition {
 
     @Override
     public void registerAttributes(ManagementResourceRegistration resourceRegistration) {
-        AbstractWriteAttributeHandler handler = new ElytronReloadRequiredWriteAttributeHandler(ATTRIBUTES_8_0_WITHOUT_CREDENTIAL_REFERENCE);
-        for (AttributeDefinition current : ATTRIBUTES_8_0_WITHOUT_CREDENTIAL_REFERENCE) {
+        AbstractWriteAttributeHandler handler = new ElytronReloadRequiredWriteAttributeHandler(ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE);
+        for (AttributeDefinition current : ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE) {
             resourceRegistration.registerReadWriteAttribute(current, null, handler);
         }
-        resourceRegistration.registerReadWriteAttribute(CREDENTIAL_REFERENCE_8_0, null, new CredentialReferenceWriteAttributeHandler(CREDENTIAL_REFERENCE_8_0));
+        resourceRegistration.registerReadWriteAttribute(CREDENTIAL_REFERENCE, null, new CredentialReferenceWriteAttributeHandler(CREDENTIAL_REFERENCE));
     }
 
     private static TrivialService.ValueSupplier<DirContextSupplier> obtainDirContextSupplier(final OperationContext context, final ModelNode model, final InjectedValue<ExceptionSupplier<CredentialSource, Exception>> credentialSourceSupplierInjector, final InjectedValue<AuthenticationContext> authenticationContextInjector, final InjectedValue<SSLContext> sslContextInjector) throws OperationFailedException {
@@ -236,10 +231,11 @@ class DirContextDefinition extends SimpleResourceDefinition {
         };
     }
 
-    private static final AbstractAddStepHandler ADD = new BaseAddHandler(DIR_CONTEXT_RUNTIME_CAPABILITY, ATTRIBUTES_8_0) {
-        protected void populateModel(ModelNode operation, ModelNode model) throws OperationFailedException {
-            super.populateModel(operation, model);
-            updateCredentialReference(model.get(CredentialReference.CREDENTIAL_REFERENCE));
+    private static final AbstractAddStepHandler ADD = new BaseAddHandler(DIR_CONTEXT_RUNTIME_CAPABILITY, ATTRIBUTES) {
+        protected void populateModel(final OperationContext context, final ModelNode operation, final Resource resource) throws  OperationFailedException {
+            super.populateModel(context, operation, resource);
+            final ModelNode model = resource.getModel();
+            updateCredentialReference(context, model.get(CredentialReference.CREDENTIAL_REFERENCE));
         }
 
         protected void performRuntime(final OperationContext context, final ModelNode operation, final ModelNode model) throws OperationFailedException {
@@ -261,8 +257,8 @@ class DirContextDefinition extends SimpleResourceDefinition {
                 serviceBuilder.addDependency(sslServiceName, SSLContext.class, sslContextInjector);
             }
 
-            if (CREDENTIAL_REFERENCE_8_0.resolveModelAttribute(context, model).isDefined()) {
-                credentialSourceSupplierInjector.inject(CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE_8_0, model, serviceBuilder, operation));
+            if (CREDENTIAL_REFERENCE.resolveModelAttribute(context, model).isDefined()) {
+                credentialSourceSupplierInjector.inject(CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, model, serviceBuilder, operation));
             }
 
             String authenticationContextName = AUTHENTICATION_CONTEXT.resolveModelAttribute(context, model).asStringOrNull();

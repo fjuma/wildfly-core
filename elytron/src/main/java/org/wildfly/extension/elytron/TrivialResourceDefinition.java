@@ -42,7 +42,7 @@ import org.jboss.as.controller.registry.OperationEntry;
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
-final class TrivialResourceDefinition extends SimpleResourceDefinition {
+class TrivialResourceDefinition extends SimpleResourceDefinition {
 
     private final AttributeDefinition[] attributes;
     private final Map<OperationDefinition, OperationStepHandler> operations;

@@ -23,12 +23,14 @@ import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.StringTokenizer;
 
+//import org.jboss.as.controller.AbstractOperationContext;
 import org.jboss.as.controller.AttributeDefinition;
 import org.jboss.as.controller.AttributeMarshaller;
 import org.jboss.as.controller.AttributeParser;
 import org.jboss.as.controller.CapabilityReferenceRecorder;
 import org.jboss.as.controller.ObjectTypeAttributeDefinition;
 import org.jboss.as.controller.OperationContext;
+//import org.jboss.as.controller.OperationContextImpl;
 import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.PathAddress;
 import org.jboss.as.controller.SimpleAttributeDefinition;
@@ -98,11 +100,15 @@ public final class CredentialReference {
      */
     public static final String CLEAR_TEXT = "clear-text";
 
+    public static final String ACTUAL_CLEAR_TEXT = "actual-clear-text";
+
     public static final String CREDENTIAL_STORE_UPDATE = "credential-store-update";
     public static final String STATUS = "status";
     public static final String NEW_ENTRY_ADDED = "new-entry-added";
     public static final String EXISTING_ENTRY_UPDATED = "existing-entry-updated";
     public static final String NEW_ALIAS = "new-alias";
+
+    private static final OperationContext.AttachmentKey<String> ACTUAL_CLEAR_TEXT_KEY = OperationContext.AttachmentKey.create(String.class);
 
     private static final SimpleAttributeDefinition credentialStoreAttribute;
     private static final SimpleAttributeDefinition credentialStoreAttribute_1_0;
@@ -110,6 +116,7 @@ public final class CredentialReference {
     private static final SimpleAttributeDefinition credentialTypeAttribute;
     private static final SimpleAttributeDefinition clearTextAttribute;
     private static final SimpleAttributeDefinition clearTextAttribute_1_0;
+    private static final SimpleAttributeDefinition actualClearTextAttribute;
 
     /** A variant that has a default capability reference configured for the attribute */
     private static final SimpleAttributeDefinition credentialStoreAttributeWithCapabilityReference_1_0;
@@ -137,6 +144,10 @@ public final class CredentialReference {
                 .setXmlName(CLEAR_TEXT)
                 .setAllowExpression(true)
                 .setAlternatives(STORE)
+                .build();
+
+        actualClearTextAttribute = new SimpleAttributeDefinitionBuilder(ACTUAL_CLEAR_TEXT, ModelType.STRING, true)
+                .setStorageRuntime()
                 .build();
 
         // both clear-text and store allowed
@@ -179,6 +190,7 @@ public final class CredentialReference {
         credentialReferenceADWithCapabilityReference = getAttributeBuilder(CREDENTIAL_REFERENCE, CREDENTIAL_REFERENCE, false, true)
                 .setRestartAllServices()
                 .build();
+
     }
 
     private CredentialReference() {
@@ -435,7 +447,7 @@ public final class CredentialReference {
 
     private static ObjectTypeAttributeDefinition.Builder getAttributeBuilder(String name, String xmlName, boolean allowNull, AttributeDefinition credentialStoreDefinition, Version version) {
         return new ObjectTypeAttributeDefinition.Builder(name, credentialStoreDefinition, credentialAliasAttribute, credentialTypeAttribute,
-                version == Version.VERSION_1_0 ? clearTextAttribute_1_0 : clearTextAttribute)
+                version == Version.VERSION_1_0 ? clearTextAttribute_1_0 : clearTextAttribute, actualClearTextAttribute)
                 .setXmlName(xmlName)
                 .setAttributeMarshaller(AttributeMarshaller.ATTRIBUTE_OBJECT)
                 .setAttributeParser(AttributeParser.OBJECT_PARSER)
@@ -666,7 +678,7 @@ public final class CredentialReference {
         ModelNode value = credentialReferenceAttributeDefinition.resolveModelAttribute(context, model);
 
         if (serviceBuilder == null) {
-            updateCredentialReference(value);
+            updateCredentialReference(context, value);
         }
 
         final String credentialStoreName;
@@ -678,7 +690,10 @@ public final class CredentialReference {
             credentialStoreName = credentialReferencePartAsStringIfDefined(value, CredentialReference.STORE);
             credentialAlias = credentialReferencePartAsStringIfDefined(value, CredentialReference.ALIAS);
             credentialType = credentialReferencePartAsStringIfDefined(value, CredentialReference.TYPE);
-            secret = credentialReferencePartAsStringIfDefined(operation.get(CREDENTIAL_REFERENCE), CredentialReference.CLEAR_TEXT);
+            secret = context.getAttachment(ACTUAL_CLEAR_TEXT_KEY);
+            //secret = credentialReferencePartAsStringIfDefined(operation.get(CREDENTIAL_REFERENCE), CredentialReference.CLEAR_TEXT);
+            //secret = credentialReferencePartAsStringIfDefined(value, CredentialReference.ACTUAL_CLEAR_TEXT);
+            //secret = credentialReferencePartAsStringIfDefined((AbstractOperationContext) context.initialOperation)
         } else {
             credentialStoreName = null;
             credentialAlias = null;
@@ -846,7 +861,7 @@ public final class CredentialReference {
         }
     }
 
-    public static void updateCredentialReference(ModelNode credentialReference) throws OperationFailedException {
+    /*public static void updateCredentialReference(ModelNode credentialReference) throws OperationFailedException {
         final String credentialStoreName;
         final String credentialType;
         final String secret;
@@ -857,6 +872,7 @@ public final class CredentialReference {
             credentialAlias = credentialReferencePartAsStringIfDefined(credentialReference, ALIAS);
             credentialType = credentialReferencePartAsStringIfDefined(credentialReference, CredentialReference.TYPE);
             secret = credentialReferencePartAsStringIfDefined(credentialReference, CLEAR_TEXT);
+            credentialReference.get(ACTUAL_CLEAR_TEXT).set(secret);
         } else {
             credentialStoreName = null;
             credentialAlias = null;
@@ -870,6 +886,43 @@ public final class CredentialReference {
                 removeSecret = true;
             } else if (! (credentialType != null && credentialType.equalsIgnoreCase("COMMAND")) && ! secret.startsWith("MASK-")) {
                 credentialReference.get(ALIAS).set(generateAlias());
+                removeSecret = true;
+            }
+            if (removeSecret) {
+                credentialReference.get(CLEAR_TEXT).set(new ModelNode());
+            }
+        }
+    }*/
+
+    public static void updateCredentialReference(OperationContext context, ModelNode credentialReference) throws OperationFailedException {
+        final String credentialStoreName;
+        final String credentialType;
+        final String secret;
+        final String credentialAlias;
+
+        if (credentialReference.isDefined()) {
+            credentialStoreName = credentialReferencePartAsStringIfDefined(credentialReference, CredentialReference.STORE);
+            credentialAlias = credentialReferencePartAsStringIfDefined(credentialReference, ALIAS);
+            credentialType = credentialReferencePartAsStringIfDefined(credentialReference, CredentialReference.TYPE);
+            secret = credentialReferencePartAsStringIfDefined(credentialReference, CLEAR_TEXT);
+            context.attach(ACTUAL_CLEAR_TEXT_KEY, secret);
+            //credentialReference.get(ACTUAL_CLEAR_TEXT).set(secret);
+        } else {
+            credentialStoreName = null;
+            credentialAlias = null;
+            credentialType = null;
+            secret = null;
+        }
+
+        boolean removeSecret = false;
+        if (credentialStoreName != null && secret != null) {
+            if (credentialAlias != null) {
+                removeSecret = true;
+            } else if (! (credentialType != null && credentialType.equalsIgnoreCase("COMMAND")) && ! secret.startsWith("MASK-")) {
+                credentialReference.get(ALIAS).set(generateAlias());
+                /*ModelNode writeAttributeOperation = Util.getWriteAttributeOperation(context.getCurrentAddress(), CredentialReference.CREDENTIAL_REFERENCE + "." + CredentialReference.ALIAS, generateAlias());
+                final OperationStepHandler writeHandler = context.getRootResourceRegistration().getSubModel(context.getCurrentAddress()).getOperationHandler(PathAddress.EMPTY_ADDRESS, WRITE_ATTRIBUTE_OPERATION);
+                context.addStep(writeAttributeOperation, writeHandler, OperationContext.Stage.MODEL);*/
                 removeSecret = true;
             }
             if (removeSecret) {

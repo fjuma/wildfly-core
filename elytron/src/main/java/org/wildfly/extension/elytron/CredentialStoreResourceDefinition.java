@@ -126,10 +126,7 @@ final class CredentialStoreResourceDefinition extends SimpleResourceDefinition {
             .setRestartAllServices()
             .build();
 
-    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE = CredentialReference.getAttributeDefinition(true,
-            CredentialReference.Version.VERSION_1_0);
-
-    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE_8_0 = CredentialReference.getAttributeDefinition(true);
+    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE = CredentialReference.getAttributeDefinition(true);
 
     static final SimpleAttributeDefinition TYPE = new SimpleAttributeDefinitionBuilder(ElytronDescriptionConstants.TYPE, ModelType.STRING, true)
             .setAttributeGroup(ElytronDescriptionConstants.IMPLEMENTATION)
@@ -222,7 +219,7 @@ final class CredentialStoreResourceDefinition extends SimpleResourceDefinition {
             .setRuntimeOnly()
             .build();
 
-    private static final AttributeDefinition[] CONFIG_ATTRIBUTES = new AttributeDefinition[] {LOCATION, CREATE, MODIFIABLE, IMPLEMENTATION_PROPERTIES, CREDENTIAL_REFERENCE_8_0, TYPE, PROVIDER_NAME, PROVIDERS, OTHER_PROVIDERS, RELATIVE_TO};
+    private static final AttributeDefinition[] CONFIG_ATTRIBUTES = new AttributeDefinition[] {LOCATION, CREATE, MODIFIABLE, IMPLEMENTATION_PROPERTIES, CREDENTIAL_REFERENCE, TYPE, PROVIDER_NAME, PROVIDERS, OTHER_PROVIDERS, RELATIVE_TO};
     private static final AttributeDefinition[] CONFIG_ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE = new AttributeDefinition[] {LOCATION, CREATE, MODIFIABLE, IMPLEMENTATION_PROPERTIES, TYPE, PROVIDER_NAME, PROVIDERS, OTHER_PROVIDERS, RELATIVE_TO};
 
     private static final CredentialStoreAddHandler ADD = new CredentialStoreAddHandler();
@@ -245,7 +242,7 @@ final class CredentialStoreResourceDefinition extends SimpleResourceDefinition {
         for (AttributeDefinition current : CONFIG_ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE) {
             resourceRegistration.registerReadWriteAttribute(current, null, write);
         }
-        resourceRegistration.registerReadWriteAttribute(CREDENTIAL_REFERENCE_8_0, null, new CredentialReferenceWriteAttributeHandler(CREDENTIAL_REFERENCE_8_0));
+        resourceRegistration.registerReadWriteAttribute(CREDENTIAL_REFERENCE, null, new CredentialReferenceWriteAttributeHandler(CREDENTIAL_REFERENCE));
         if (isServerOrHostController(resourceRegistration)) {
             resourceRegistration.registerReadOnlyAttribute(STATE, new ElytronRuntimeOnlyHandler() {
 
@@ -281,9 +278,10 @@ final class CredentialStoreResourceDefinition extends SimpleResourceDefinition {
         }
 
         @Override
-        protected void populateModel(ModelNode operation, ModelNode model) throws OperationFailedException {
-            super.populateModel(operation, model);
-            updateCredentialReference(model.get(CredentialReference.CREDENTIAL_REFERENCE));
+        protected void populateModel(final OperationContext context, final ModelNode operation, final Resource resource) throws  OperationFailedException {
+            super.populateModel(context, operation, resource);
+            final ModelNode model = resource.getModel();
+            updateCredentialReference(context, model.get(CredentialReference.CREDENTIAL_REFERENCE));
         }
 
         @Override
@@ -344,7 +342,7 @@ final class CredentialStoreResourceDefinition extends SimpleResourceDefinition {
             }
 
             csService.getCredentialSourceSupplierInjector()
-                    .inject(CredentialReference.getCredentialSourceSupplier(context, CredentialStoreResourceDefinition.CREDENTIAL_REFERENCE_8_0, model, credentialStoreServiceBuilder, operation));
+                    .inject(CredentialReference.getCredentialSourceSupplier(context, CredentialStoreResourceDefinition.CREDENTIAL_REFERENCE, model, credentialStoreServiceBuilder, operation));
 
             commonDependencies(credentialStoreServiceBuilder).install();
         }

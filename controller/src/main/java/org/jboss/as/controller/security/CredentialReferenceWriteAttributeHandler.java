@@ -49,7 +49,7 @@ public class CredentialReferenceWriteAttributeHandler extends ReloadRequiredWrit
     protected void finishModelStage(OperationContext context, ModelNode operation, String attributeName, ModelNode newValue,
                                     ModelNode oldValue, Resource resource) throws OperationFailedException {
         super.finishModelStage(context, operation, attributeName, newValue, oldValue, resource);
-        updateCredentialReference(resource.getModel().get(CREDENTIAL_REFERENCE));
+        updateCredentialReference(context, resource.getModel().get(CREDENTIAL_REFERENCE));
     }
 
     protected boolean applyUpdateToRuntime(OperationContext context, ModelNode operation, String attributeName,

@@ -18,8 +18,6 @@
 
 package org.wildfly.extension.elytron;
 
-import static org.jboss.as.controller.PersistentResourceXMLDescription.builder;
-import static org.wildfly.extension.elytron.ElytronDescriptionConstants.DIR_CONTEXTS;
 import static org.wildfly.extension.elytron.ElytronDescriptionConstants.SECURITY_DOMAIN;
 import static org.wildfly.extension.elytron.ElytronDescriptionConstants.SECURITY_DOMAINS;
 
@@ -33,11 +31,6 @@ import org.jboss.as.controller.PersistentResourceXMLDescription;
  * @since 10.0
  */
 public class ElytronSubsystemParser8_0 extends ElytronSubsystemParser7_0 {
-
-    final PersistentResourceXMLDescription dirContextParser_8_0 = PersistentResourceXMLDescription.decorator(DIR_CONTEXTS)
-            .addChild(builder(PathElement.pathElement(ElytronDescriptionConstants.DIR_CONTEXT), null)
-                    .addAttributes(DirContextDefinition.ATTRIBUTES_8_0))
-            .build();
 
     final PersistentResourceXMLDescription domainParser = PersistentResourceXMLDescription.builder(PathElement.pathElement(SECURITY_DOMAIN))
             .setXmlWrapperElement(SECURITY_DOMAINS)
@@ -80,13 +73,4 @@ public class ElytronSubsystemParser8_0 extends ElytronSubsystemParser7_0 {
         return new AuthenticationClientParser().parser_8_0;
     }
 
-    @Override
-    PersistentResourceXMLDescription getCredentialStoreParser() {
-        return new CredentialStoreParser().parser_8_0;
-    }
-
-    @Override
-    PersistentResourceXMLDescription getDirContextParser() {
-        return dirContextParser_8_0;
-    }
 }

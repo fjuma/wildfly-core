@@ -110,16 +110,11 @@ class CertificateAuthorityAccountDefinition extends SimpleResourceDefinition {
             .setRestartAllServices()
             .build();
 
-    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE = CredentialReference.getAttributeBuilder(true, true,
-            CredentialReference.Version.VERSION_1_0)
+    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE = CredentialReference.getAttributeBuilder(true, true)
             .setAttributeGroup(ElytronDescriptionConstants.ACCOUNT_KEY)
             .build();
 
-    static final ObjectTypeAttributeDefinition CREDENTIAL_REFERENCE_8_0 = CredentialReference.getAttributeBuilder(true, true)
-            .setAttributeGroup(ElytronDescriptionConstants.ACCOUNT_KEY)
-            .build();
-
-    private static final AttributeDefinition[] ATTRIBUTES = new AttributeDefinition[] { CERTIFICATE_AUTHORITY, CONTACT_URLS, KEY_STORE, ALIAS, CREDENTIAL_REFERENCE_8_0 };
+    private static final AttributeDefinition[] ATTRIBUTES = new AttributeDefinition[] { CERTIFICATE_AUTHORITY, CONTACT_URLS, KEY_STORE, ALIAS, CREDENTIAL_REFERENCE};
 
     private static final AttributeDefinition[] ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE = new AttributeDefinition[] { CERTIFICATE_AUTHORITY, CONTACT_URLS, KEY_STORE, ALIAS };
 
@@ -180,9 +175,10 @@ class CertificateAuthorityAccountDefinition extends SimpleResourceDefinition {
         }
 
         @Override
-        protected void populateModel(ModelNode operation, ModelNode model) throws OperationFailedException {
-            super.populateModel(operation, model);
-            updateCredentialReference(model.get(CredentialReference.CREDENTIAL_REFERENCE));
+        protected void populateModel(final OperationContext context, final ModelNode operation, final Resource resource) throws  OperationFailedException {
+            super.populateModel(context, operation, resource);
+            final ModelNode model = resource.getModel();
+            updateCredentialReference(context, model.get(CredentialReference.CREDENTIAL_REFERENCE));
         }
 
         @Override
@@ -192,8 +188,8 @@ class CertificateAuthorityAccountDefinition extends SimpleResourceDefinition {
             final String alias = ALIAS.resolveModelAttribute(context, model).asString();
             final String keyStoreName = KEY_STORE.resolveModelAttribute(context, model).asString();
             ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier = null;
-            if (CREDENTIAL_REFERENCE_8_0.resolveModelAttribute(context, operation).isDefined()) {
-                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE_8_0, operation, null, operation);
+            if (CREDENTIAL_REFERENCE.resolveModelAttribute(context, operation).isDefined()) {
+                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, CREDENTIAL_REFERENCE, operation, null, operation);
             }
             final List<ModelNode> contactUrls = CONTACT_URLS.resolveModelAttribute(context, model).asListOrEmpty();
             final List<String> contactUrlsList = new ArrayList<>(contactUrls.size());
@@ -237,7 +233,7 @@ class CertificateAuthorityAccountDefinition extends SimpleResourceDefinition {
         for (AttributeDefinition current : ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE) {
             resourceRegistration.registerReadWriteAttribute(current, null, WRITE);
         }
-        resourceRegistration.registerReadWriteAttribute(CREDENTIAL_REFERENCE_8_0, null, new CredentialReferenceWriteAttributeHandler(CREDENTIAL_REFERENCE_8_0));
+        resourceRegistration.registerReadWriteAttribute(CREDENTIAL_REFERENCE, null, new CredentialReferenceWriteAttributeHandler(CREDENTIAL_REFERENCE));
     }
 
     @Override

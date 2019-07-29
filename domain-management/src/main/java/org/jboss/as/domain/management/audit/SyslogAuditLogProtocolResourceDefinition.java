@@ -27,6 +27,7 @@ import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OP_
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.PROTOCOL;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.SYSLOG_HANDLER;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.TRUSTSTORE;
+import static org.jboss.as.controller.security.CredentialReference.updateCredentialReference;
 import static org.jboss.as.domain.management.security.KeystoreAttributes.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_NAME;
 import static org.jboss.as.domain.management.security.KeystoreAttributes.KEY_PASSWORD_CREDENTIAL_REFERENCE_NAME;
 
@@ -57,7 +58,6 @@ import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.as.controller.registry.Resource;
 import org.jboss.as.controller.registry.Resource.ResourceEntry;
 import org.jboss.as.controller.security.CredentialReference;
-import org.jboss.as.controller.security.CredentialReferenceWriteAttributeHandler;
 import org.jboss.as.controller.services.path.PathManagerService;
 import org.jboss.as.domain.management._private.DomainManagementResolver;
 import org.jboss.as.domain.management.logging.DomainManagementLogger;
@@ -232,29 +232,26 @@ public abstract class SyslogAuditLogProtocolResourceDefinition extends SimpleRes
         public static final PathElement CLIENT_CERT_ELEMENT = PathElement.pathElement(AUTHENTICATION, CLIENT_CERT_STORE);
 
         public static final SimpleAttributeDefinition KEYSTORE_PASSWORD = KeystoreAttributes.KEYSTORE_PASSWORD;
-        public static final ObjectTypeAttributeDefinition KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE = CredentialReference.getAttributeBuilder(KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_NAME, KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_NAME, false, true, CredentialReference.Version.VERSION_1_0)
-                .setAlternatives(ModelDescriptionConstants.KEYSTORE_PASSWORD)
-                .build();
-        public static final ObjectTypeAttributeDefinition KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_VERSION = CredentialReference.getAttributeBuilder(KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_NAME, KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_NAME, false, true)
+
+        public static final ObjectTypeAttributeDefinition KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE = CredentialReference.getAttributeBuilder(KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_NAME, KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_NAME, false, true)
                     .setAlternatives(ModelDescriptionConstants.KEYSTORE_PASSWORD)
                     .build();
         public static final SimpleAttributeDefinition KEYSTORE_PATH = KeystoreAttributes.KEYSTORE_PATH;
         public static final SimpleAttributeDefinition KEYSTORE_RELATIVE_TO = KeystoreAttributes.KEYSTORE_RELATIVE_TO;
         public static final SimpleAttributeDefinition KEY_PASSWORD = KeystoreAttributes.KEY_PASSWORD;
         public static final ObjectTypeAttributeDefinition KEY_PASSWORD_CREDENTIAL_REFERENCE = CredentialReference.getAttributeBuilder(KEY_PASSWORD_CREDENTIAL_REFERENCE_NAME, KEY_PASSWORD_CREDENTIAL_REFERENCE_NAME, true, true)
-                .setAlternatives(org.jboss.as.domain.management.ModelDescriptionConstants.KEY_PASSWORD)
-                .build();
-        public static final ObjectTypeAttributeDefinition KEY_PASSWORD_CREDENTIAL_REFERENCE_VERSION = CredentialReference.getAttributeBuilder(KEY_PASSWORD_CREDENTIAL_REFERENCE_NAME, KEY_PASSWORD_CREDENTIAL_REFERENCE_NAME, true, true)
                     .setAlternatives(org.jboss.as.domain.management.ModelDescriptionConstants.KEY_PASSWORD)
                     .build();
 
         private static final AttributeDefinition[] CLIENT_CERT_ATTRIBUTES = new AttributeDefinition[]{
-                KEYSTORE_PASSWORD, KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_VERSION, KEYSTORE_PATH, KEYSTORE_RELATIVE_TO, KEY_PASSWORD, KEY_PASSWORD_CREDENTIAL_REFERENCE_VERSION};
+                KEYSTORE_PASSWORD, KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, KEYSTORE_PATH, KEYSTORE_RELATIVE_TO, KEY_PASSWORD, KEY_PASSWORD_CREDENTIAL_REFERENCE};
         private static final AttributeDefinition[] CLIENT_CERT_ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE = new AttributeDefinition[]{
                 KEYSTORE_PASSWORD, KEYSTORE_PATH, KEYSTORE_RELATIVE_TO, KEY_PASSWORD};
 
         private static final AttributeDefinition[] TRUSTSTORE_ATTRIBUTES = new AttributeDefinition[]{
-                KEYSTORE_PASSWORD, KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_VERSION, KEYSTORE_PATH, KEYSTORE_RELATIVE_TO};
+                KEYSTORE_PASSWORD, KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, KEYSTORE_PATH, KEYSTORE_RELATIVE_TO};
+        private static final AttributeDefinition[] TRUSTSTORE_ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE = new AttributeDefinition[]{
+                KEYSTORE_PASSWORD, KEYSTORE_PATH, KEYSTORE_RELATIVE_TO};
 
         private final ManagedAuditLogger auditLogger;
         private final PathManagerService pathManager;
@@ -287,12 +284,12 @@ public abstract class SyslogAuditLogProtocolResourceDefinition extends SimpleRes
 
         @Override
         public void registerAttributes(ManagementResourceRegistration resourceRegistration) {
-            OperationStepHandler handler = new SyslogAuditLogHandlerResourceDefinition.HandlerWriteAttributeHandler(auditLogger, pathManager, environmentReader, CLIENT_CERT_ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE);
+            OperationStepHandler handler = new SyslogAuditLogHandlerResourceDefinition.HandlerWriteAttributeHandler(auditLogger, pathManager, environmentReader, attributes);
             for (AttributeDefinition attr : attributes){
                 resourceRegistration.registerReadWriteAttribute(attr, null, handler);
             }
-            resourceRegistration.registerReadWriteAttribute(KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_VERSION, null, new CredentialReferenceWriteAttributeHandler(KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_VERSION));
-            resourceRegistration.registerReadWriteAttribute(KEY_PASSWORD_CREDENTIAL_REFERENCE_VERSION, null, new CredentialReferenceWriteAttributeHandler(KEY_PASSWORD_CREDENTIAL_REFERENCE_VERSION));
+            /*resourceRegistration.registerReadWriteAttribute(KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, null, new CredentialReferenceWriteAttributeHandler(KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE));
+            resourceRegistration.registerReadWriteAttribute(KEY_PASSWORD_CREDENTIAL_REFERENCE, null, new CredentialReferenceWriteAttributeHandler(KEY_PASSWORD_CREDENTIAL_REFERENCE));*/
         }
     }
 
@@ -395,6 +392,13 @@ public abstract class SyslogAuditLogProtocolResourceDefinition extends SimpleRes
             this.auditLogger = auditLogger;
             this.pathManager = pathManager;
             this.environmentReader = environmentReader;
+        }
+
+        @Override
+        protected void populateModel(final OperationContext context, final ModelNode operation, final Resource resource) throws  OperationFailedException {
+            super.populateModel(context, operation, resource);
+            final ModelNode model = resource.getModel();
+            updateCredentialReference(context, model.get(CredentialReference.CREDENTIAL_REFERENCE));
         }
 
         @Override
