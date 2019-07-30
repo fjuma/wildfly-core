@@ -896,7 +896,9 @@ public final class CredentialReference {
             credentialAlias = credentialReferencePartAsStringIfDefined(credentialReference, ALIAS);
             credentialType = credentialReferencePartAsStringIfDefined(credentialReference, CredentialReference.TYPE);
             secret = credentialReferencePartAsStringIfDefined(credentialReference, CLEAR_TEXT);
-            context.attach(ACTUAL_CLEAR_TEXT_KEY, secret);
+            if (secret != null) {
+                context.attach(ACTUAL_CLEAR_TEXT_KEY, secret);
+            }
             //credentialReference.get(ACTUAL_CLEAR_TEXT).set(secret);
         } else {
             credentialStoreName = null;

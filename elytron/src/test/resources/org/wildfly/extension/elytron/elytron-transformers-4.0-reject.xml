@@ -1,4 +1,9 @@
 <subsystem xmlns="urn:wildfly:elytron:8.0" default-ssl-context="ClientContext">
+    <credential-stores>
+        <credential-store name="store1" location="path/to/store_file">
+            <credential-reference clear-text="STOREPASSWORD"/>
+        </credential-store>
+    </credential-stores>
     <jaspi>
         <jaspi-configuration name="minimal">
             <server-auth-modules>
@@ -92,6 +97,11 @@
             <key-store name="automatic.keystore">
                 <credential-reference clear-text="elytron"/>
                 <implementation/>
+                <file path="accounts.keystore.jks" relative-to="jboss.server.config.dir"/>
+            </key-store>
+            <key-store name="test.keystore">
+                <credential-reference store="store1" clear-text="elytron"/>
+                <implementation type="JKS"/>
                 <file path="accounts.keystore.jks" relative-to="jboss.server.config.dir"/>
             </key-store>
         </key-stores>

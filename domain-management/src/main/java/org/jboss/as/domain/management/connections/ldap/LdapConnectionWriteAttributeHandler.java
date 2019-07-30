@@ -44,11 +44,11 @@ import org.jboss.msc.service.ServiceRegistry;
 public class LdapConnectionWriteAttributeHandler extends AbstractWriteAttributeHandler<Config> {
 
     public LdapConnectionWriteAttributeHandler() {
-        super(LdapConnectionResourceDefinition.ATTRIBUTE_DEFINITIONS);
+        super(LdapConnectionResourceDefinition.ATTRIBUTE_DEFINITIONS_WITHOUT_SEARCH_CREDENTIAL_REFERENCE);
     }
 
     void registerAttributes(final ManagementResourceRegistration registration) {
-        for (AttributeDefinition attr : LdapConnectionResourceDefinition.ATTRIBUTE_DEFINITIONS) {
+        for (AttributeDefinition attr : LdapConnectionResourceDefinition.ATTRIBUTE_DEFINITIONS_WITHOUT_SEARCH_CREDENTIAL_REFERENCE) {
             registration.registerReadWriteAttribute(attr, null, this);
         }
     }

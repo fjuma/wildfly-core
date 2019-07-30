@@ -47,10 +47,11 @@ class TrivialResourceDefinition extends SimpleResourceDefinition {
     private final AttributeDefinition[] attributes;
     private final Map<OperationDefinition, OperationStepHandler> operations;
     private final Map<AttributeDefinition, OperationStepHandler> readOnlyAttributes;
+    private final Map<AttributeDefinition, OperationStepHandler> readWriteAttributes;
     private final List<ResourceDefinition> children;
 
     private TrivialResourceDefinition(String pathKey, ResourceDescriptionResolver resourceDescriptionResolver, AbstractAddStepHandler add, AbstractRemoveStepHandler remove, AttributeDefinition[] attributes,
-            Map<AttributeDefinition, OperationStepHandler> readOnlyAttributes, Map<OperationDefinition, OperationStepHandler> operations, List<ResourceDefinition> children,
+            Map<AttributeDefinition, OperationStepHandler> readOnlyAttributes, Map<AttributeDefinition, OperationStepHandler> readWriteAttributes, Map<OperationDefinition, OperationStepHandler> operations, List<ResourceDefinition> children,
             RuntimeCapability<?>[] runtimeCapabilities) {
         super(new Parameters(PathElement.pathElement(pathKey),
                 resourceDescriptionResolver)
@@ -62,24 +63,42 @@ class TrivialResourceDefinition extends SimpleResourceDefinition {
 
         this.attributes = attributes;
         this.readOnlyAttributes = readOnlyAttributes;
+        this.readWriteAttributes = readWriteAttributes;
         this.operations = operations;
         this.children = children;
     }
 
     TrivialResourceDefinition(String pathKey, ResourceDescriptionResolver resourceDescriptionResolver, AbstractAddStepHandler add, AttributeDefinition[] attributes, RuntimeCapability<?> ... runtimeCapabilities) {
-        this(pathKey, resourceDescriptionResolver, add, new TrivialCapabilityServiceRemoveHandler(add, runtimeCapabilities), attributes, null, null, null, runtimeCapabilities);
+        this(pathKey, resourceDescriptionResolver, add, new TrivialCapabilityServiceRemoveHandler(add, runtimeCapabilities), attributes, null, null, null, null, runtimeCapabilities);
     }
 
     TrivialResourceDefinition(String pathKey, AbstractAddStepHandler add, AttributeDefinition[] attributes, RuntimeCapability<?> ... runtimeCapabilities) {
-        this(pathKey, ElytronExtension.getResourceDescriptionResolver(pathKey), add, new TrivialCapabilityServiceRemoveHandler(add, runtimeCapabilities), attributes, null, null, null, runtimeCapabilities);
+        this(pathKey, ElytronExtension.getResourceDescriptionResolver(pathKey), add, new TrivialCapabilityServiceRemoveHandler(add, runtimeCapabilities), attributes, null, null, null, null, runtimeCapabilities);
     }
 
     @Override
     public void registerAttributes(ManagementResourceRegistration resourceRegistration) {
          if (attributes != null && attributes.length > 0) {
-             AbstractWriteAttributeHandler writeHandler = new ElytronReloadRequiredWriteAttributeHandler(attributes);
-             for (AttributeDefinition current : attributes) {
+             AttributeDefinition[] attributesWithoutReadWriteAttributes;
+             if (readWriteAttributes != null && readWriteAttributes.size() > 0) {
+                 attributesWithoutReadWriteAttributes = new AttributeDefinition[attributes.length - readWriteAttributes.size()];
+                 int i = 0;
+                 for (AttributeDefinition current : attributes) {
+                     if (! readWriteAttributes.containsKey(current)) {
+                         attributesWithoutReadWriteAttributes[i++] = current;
+                     }
+                 }
+             } else {
+                 attributesWithoutReadWriteAttributes = attributes;
+             }
+             AbstractWriteAttributeHandler writeHandler = new ElytronReloadRequiredWriteAttributeHandler(attributesWithoutReadWriteAttributes);
+             for (AttributeDefinition current : attributesWithoutReadWriteAttributes) {
                  resourceRegistration.registerReadWriteAttribute(current, null, writeHandler);
+             }
+             if (readWriteAttributes != null) {
+                 for (Entry<AttributeDefinition, OperationStepHandler> entry : readWriteAttributes.entrySet()) {
+                     resourceRegistration.registerReadWriteAttribute(entry.getKey(), null, entry.getValue());
+                 }
              }
          }
 
@@ -126,6 +145,7 @@ class TrivialResourceDefinition extends SimpleResourceDefinition {
         private AbstractRemoveStepHandler removeHandler;
         private AttributeDefinition[] attributes;
         private Map<AttributeDefinition, OperationStepHandler> readOnlyAttributes;
+        private Map<AttributeDefinition, OperationStepHandler> readWriteAttributes;
         private Map<OperationDefinition, OperationStepHandler> operations;
         private RuntimeCapability<?>[] runtimeCapabilities;
         private List<ResourceDefinition> children;
@@ -171,6 +191,16 @@ class TrivialResourceDefinition extends SimpleResourceDefinition {
             return this;
         }
 
+        Builder addReadWriteAttribute(AttributeDefinition attribute, OperationStepHandler handler) {
+            if (readWriteAttributes == null) {
+                readWriteAttributes = new HashMap<>();
+            }
+            readWriteAttributes.put(attribute, handler);
+
+            return this;
+        }
+
+
         Builder addOperation(OperationDefinition operation, OperationStepHandler handler) {
             if (operations == null) {
                 operations = new HashMap<>();
@@ -200,7 +230,7 @@ class TrivialResourceDefinition extends SimpleResourceDefinition {
             ResourceDescriptionResolver resourceDescriptionResolver = this.resourceDescriptionResolver != null ? this.resourceDescriptionResolver : ElytronExtension.getResourceDescriptionResolver(pathKey);
             return new TrivialResourceDefinition(pathKey, resourceDescriptionResolver, addHandler,
                     removeHandler != null ? removeHandler : new TrivialCapabilityServiceRemoveHandler(addHandler, runtimeCapabilities),
-                    attributes, readOnlyAttributes, operations, children, runtimeCapabilities);
+                    attributes, readOnlyAttributes, readWriteAttributes, operations, children, runtimeCapabilities);
         }
 
     }

@@ -27,7 +27,6 @@ import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OP_
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.PROTOCOL;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.SYSLOG_HANDLER;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.TRUSTSTORE;
-import static org.jboss.as.controller.security.CredentialReference.CREDENTIAL_REFERENCE;
 import static org.jboss.as.controller.security.CredentialReference.updateCredentialReference;
 import static org.jboss.as.domain.management.security.KeystoreAttributes.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_NAME;
 import static org.jboss.as.domain.management.security.KeystoreAttributes.KEY_PASSWORD_CREDENTIAL_REFERENCE_NAME;
@@ -291,7 +290,7 @@ public abstract class SyslogAuditLogProtocolResourceDefinition extends SimpleRes
                 for (AttributeDefinition attr : TRUSTSTORE_ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE){
                     resourceRegistration.registerReadWriteAttribute(attr, null, handler);
                 }
-                resourceRegistration.registerReadWriteAttribute(CREDENTIAL_REFERENCE, new CredentialReferenceWriteAttributeHandler(KEY_PASSWORD_CREDENTIAL_REFERENCE);
+                resourceRegistration.registerReadWriteAttribute(KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, null, new CredentialReferenceWriteAttributeHandler(KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE));
             } else {
                 for (AttributeDefinition attr : CLIENT_CERT_ATTRIBUTES_WITHOUT_CREDENTIAL_REFERENCE) {
                     resourceRegistration.registerReadWriteAttribute(attr, null, handler);

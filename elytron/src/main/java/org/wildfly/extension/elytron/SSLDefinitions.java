@@ -19,6 +19,7 @@
 package org.wildfly.extension.elytron;
 
 import static org.jboss.as.controller.capability.RuntimeCapability.buildDynamicCapabilityName;
+import static org.jboss.as.controller.security.CredentialReference.updateCredentialReference;
 import static org.wildfly.extension.elytron.Capabilities.KEY_MANAGER_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.KEY_MANAGER_RUNTIME_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.KEY_STORE_CAPABILITY;
@@ -101,6 +102,7 @@ import org.jboss.as.controller.operations.validation.ParameterValidator;
 import org.jboss.as.controller.registry.AttributeAccess;
 import org.jboss.as.controller.registry.Resource;
 import org.jboss.as.controller.security.CredentialReference;
+import org.jboss.as.controller.security.CredentialReferenceWriteAttributeHandler;
 import org.jboss.as.controller.services.path.PathManager;
 import org.jboss.as.controller.services.path.PathManagerService;
 import org.jboss.dmr.ModelNode;
@@ -471,6 +473,13 @@ class SSLDefinitions {
         AbstractAddStepHandler add = new TrivialAddHandler<KeyManager>(KeyManager.class, attributes, KEY_MANAGER_RUNTIME_CAPABILITY) {
 
             @Override
+            protected void populateModel(final OperationContext context, final ModelNode operation, final Resource resource) throws  OperationFailedException {
+                super.populateModel(context, operation, resource);
+                final ModelNode model = resource.getModel();
+                updateCredentialReference(context, model.get(CredentialReference.CREDENTIAL_REFERENCE));
+            }
+
+            @Override
             protected ValueSupplier<KeyManager> getValueSupplier(ServiceBuilder<KeyManager> serviceBuilder, OperationContext context, ModelNode model) throws OperationFailedException {
                 final String algorithmName = ALGORITHM.resolveModelAttribute(context, model).asStringOrNull();
                 final String providerName = PROVIDER_NAME.resolveModelAttribute(context, model).asStringOrNull();
@@ -568,6 +577,7 @@ class SSLDefinitions {
                 .setPathKey(ElytronDescriptionConstants.KEY_MANAGER)
                 .setAddHandler(add)
                 .setAttributes(attributes)
+                .addReadWriteAttribute(credentialReferenceDefinition, new CredentialReferenceWriteAttributeHandler(credentialReferenceDefinition))
                 .setRuntimeCapabilities(KEY_MANAGER_RUNTIME_CAPABILITY)
                 .addOperation(new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.INIT, RESOURCE_RESOLVER)
                         .setRuntimeOnly()

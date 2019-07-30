@@ -46,6 +46,7 @@ import org.jboss.as.controller.parsing.Attribute;
 import org.jboss.as.controller.registry.AttributeAccess;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.as.controller.registry.OperationEntry;
+import org.jboss.as.controller.security.CredentialReferenceWriteAttributeHandler;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
 
@@ -81,6 +82,10 @@ public class SSLServerIdentityResourceDefinition extends SimpleResourceDefinitio
             KeystoreAttributes.ALIAS, KeystoreAttributes.KEY_PASSWORD, KeystoreAttributes.KEYSTORE_PROVIDER, KeystoreAttributes.GENERATE_SELF_SIGNED_CERTIFICATE_HOST,
             KeystoreAttributes.KEY_PASSWORD_CREDENTIAL_REFERENCE, KeystoreAttributes.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE
     };
+    public static final AttributeDefinition[] ATTRIBUTE_DEFINITIONS_WITHOUT_CREDENTIAL_REFERENCES = {
+            PROTOCOL, ENABLED_CIPHER_SUITES, ENABLED_PROTOCOLS, KeystoreAttributes.KEYSTORE_PASSWORD, KeystoreAttributes.KEYSTORE_PATH, KeystoreAttributes.KEYSTORE_RELATIVE_TO,
+            KeystoreAttributes.ALIAS, KeystoreAttributes.KEY_PASSWORD, KeystoreAttributes.KEYSTORE_PROVIDER, KeystoreAttributes.GENERATE_SELF_SIGNED_CERTIFICATE_HOST
+    };
 
     public SSLServerIdentityResourceDefinition() {
         super(new Parameters(PathElement.pathElement(ModelDescriptionConstants.SERVER_IDENTITY, ModelDescriptionConstants.SSL),
@@ -94,8 +99,10 @@ public class SSLServerIdentityResourceDefinition extends SimpleResourceDefinitio
 
     @Override
     public void registerAttributes(ManagementResourceRegistration resourceRegistration) {
-        SecurityRealmChildWriteAttributeHandler handler = new SecurityRealmChildWriteAttributeHandler(ATTRIBUTE_DEFINITIONS);
+        SecurityRealmChildWriteAttributeHandler handler = new SecurityRealmChildWriteAttributeHandler(ATTRIBUTE_DEFINITIONS_WITHOUT_CREDENTIAL_REFERENCES);
         handler.registerAttributes(resourceRegistration);
+        resourceRegistration.registerReadWriteAttribute(KeystoreAttributes.KEY_PASSWORD_CREDENTIAL_REFERENCE, null, new CredentialReferenceWriteAttributeHandler(KeystoreAttributes.KEY_PASSWORD_CREDENTIAL_REFERENCE));
+        resourceRegistration.registerReadWriteAttribute(KeystoreAttributes.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, null, new CredentialReferenceWriteAttributeHandler(KeystoreAttributes.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE));
     }
 
     private static class StringListMarshaller extends AttributeMarshaller {

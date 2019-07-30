@@ -66,17 +66,7 @@ import org.jboss.staxmapper.XMLExtendedStreamReader;
  * @author Tomaz Cerar
  */
 class TlsParser {
-    // for 1.0 version of credential-reference
     private PersistentResourceXMLBuilder keyManagerParser = PersistentResourceXMLDescription.builder(PathElement.pathElement(KEY_MANAGER))
-            .setXmlWrapperElement(KEY_MANAGERS)
-            .addAttribute(SSLDefinitions.ALGORITHM)
-            .addAttribute(SSLDefinitions.KEYSTORE)
-            .addAttribute(SSLDefinitions.ALIAS_FILTER)
-            .addAttribute(SSLDefinitions.PROVIDERS)
-            .addAttribute(SSLDefinitions.PROVIDER_NAME)
-            .addAttribute(CredentialReference.getAttributeDefinition(CredentialReference.Version.VERSION_1_0));
-
-    private PersistentResourceXMLBuilder keyManagerParser_8_0 = PersistentResourceXMLDescription.builder(PathElement.pathElement(KEY_MANAGER))
             .setXmlWrapperElement(KEY_MANAGERS)
             .addAttribute(SSLDefinitions.ALGORITHM)
             .addAttribute(SSLDefinitions.KEYSTORE)
@@ -250,11 +240,11 @@ class TlsParser {
 
     final PersistentResourceXMLDescription tlsParser_8_0 = decorator(TLS)
             .addChild(decorator(KEY_STORES)
-                    .addChild(keyStoreParser) // credential-reference supports both store and clear-text password
+                    .addChild(keyStoreParser)
                     .addChild(ldapKeyStoreParser)
                     .addChild(filteringKeyStoreParser)
             )
-            .addChild(keyManagerParser_8_0) // credential-reference supports both store and clear-text password
+            .addChild(keyManagerParser)
             .addChild(trustManagerParser)
             .addChild(serverSslContextParser)
             .addChild(clientSslContextParser)

@@ -40,6 +40,7 @@ import org.jboss.as.controller.operations.validation.URIValidator;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.as.controller.registry.OperationEntry;
 import org.jboss.as.controller.security.CredentialReference;
+import org.jboss.as.controller.security.CredentialReferenceWriteAttributeHandler;
 import org.jboss.as.domain.management.ModelDescriptionConstants;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
@@ -108,6 +109,7 @@ public class LdapConnectionResourceDefinition extends SimpleResourceDefinition {
             .build();
 
     public static final AttributeDefinition[] ATTRIBUTE_DEFINITIONS = {URL, SEARCH_DN, SEARCH_CREDENTIAL, SEARCH_CREDENTIAL_REFERENCE, SECURITY_REALM, INITIAL_CONTEXT_FACTORY, REFERRALS, HANDLES_REFERRALS_FOR, ALWAYS_SEND_CLIENT_CERT};
+    public static final AttributeDefinition[] ATTRIBUTE_DEFINITIONS_WITHOUT_SEARCH_CREDENTIAL_REFERENCE = {URL, SEARCH_DN, SEARCH_CREDENTIAL, SECURITY_REALM, INITIAL_CONTEXT_FACTORY, REFERRALS, HANDLES_REFERRALS_FOR, ALWAYS_SEND_CLIENT_CERT};
 
 
     private LdapConnectionResourceDefinition(OperationStepHandler add, OperationStepHandler remove) {
@@ -134,6 +136,7 @@ public class LdapConnectionResourceDefinition extends SimpleResourceDefinition {
 
         LdapConnectionWriteAttributeHandler writeHandler = new LdapConnectionWriteAttributeHandler();
         writeHandler.registerAttributes(resourceRegistration);
+        resourceRegistration.registerReadWriteAttribute(SEARCH_CREDENTIAL_REFERENCE, null,  new CredentialReferenceWriteAttributeHandler(SEARCH_CREDENTIAL_REFERENCE));
     }
 
     public enum ReferralHandling {

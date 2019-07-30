@@ -37,6 +37,7 @@ import org.jboss.as.controller.operations.validation.StringLengthValidator;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.as.controller.registry.OperationEntry;
 import org.jboss.as.controller.security.CredentialReference;
+import org.jboss.as.controller.security.CredentialReferenceWriteAttributeHandler;
 import org.jboss.as.domain.management.ModelDescriptionConstants;
 import org.jboss.dmr.ModelType;
 
@@ -58,6 +59,7 @@ public class SecretServerIdentityResourceDefinition extends SimpleResourceDefini
             .build();
 
     public static final AttributeDefinition[] ATTRIBUTE_DEFINITIONS = {VALUE, CREDENTIAL_REFERENCE};
+    public static final AttributeDefinition[] ATTRIBUTE_DEFINITIONS_WITHOUT_CREDENTIAL_REFERENCE = {VALUE};
 
     public SecretServerIdentityResourceDefinition() {
         super(new Parameters(PathElement.pathElement(SERVER_IDENTITY, SECRET),
@@ -73,9 +75,10 @@ public class SecretServerIdentityResourceDefinition extends SimpleResourceDefini
     @Override
     public void registerAttributes(ManagementResourceRegistration resourceRegistration) {
         super.registerAttributes(resourceRegistration);
-        for (AttributeDefinition att : ATTRIBUTE_DEFINITIONS) {
+        for (AttributeDefinition att : ATTRIBUTE_DEFINITIONS_WITHOUT_CREDENTIAL_REFERENCE) {
             SecurityRealmChildWriteAttributeHandler handler = new SecurityRealmChildWriteAttributeHandler(att);
             handler.registerAttributes(resourceRegistration);
         }
+        resourceRegistration.registerReadWriteAttribute(CREDENTIAL_REFERENCE, null, new CredentialReferenceWriteAttributeHandler(CREDENTIAL_REFERENCE));
     }
 }
