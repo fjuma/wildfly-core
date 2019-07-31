@@ -42,6 +42,7 @@ import org.jboss.as.subsystem.test.AbstractSubsystemTest;
 import org.jboss.as.subsystem.test.KernelServices;
 import org.jboss.dmr.ModelNode;
 import org.jboss.msc.service.ServiceName;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -86,10 +87,6 @@ public class CredentialStoreUpdatesTestCase extends AbstractSubsystemTest {
                 return Security.insertProviderAt(wildFlyElytronProvider, 1);
             }
         });
-        nonEmptyCSUtil = new CredentialStoreUtility(NON_EMPTY_CS_PATH, CS_PASSWORD);
-        nonEmptyCSUtil.addEntry(EXISTING_ALIAS, EXISTING_PASSWORD);
-        emptyCSUtil1 = new CredentialStoreUtility(EMPTY_CS_PATH1, CS_PASSWORD);
-        emptyCSUtil2 = new CredentialStoreUtility(EMPTY_CS_PATH2, CS_PASSWORD);
     }
 
     @Before
@@ -98,13 +95,20 @@ public class CredentialStoreUpdatesTestCase extends AbstractSubsystemTest {
         if (!services.isSuccessfulBoot()) {
             Assert.fail(services.getBootError().toString());
         }
+        nonEmptyCSUtil = new CredentialStoreUtility(NON_EMPTY_CS_PATH, CS_PASSWORD);
+        emptyCSUtil1 = new CredentialStoreUtility(EMPTY_CS_PATH1, CS_PASSWORD);
+        emptyCSUtil2 = new CredentialStoreUtility(EMPTY_CS_PATH2, CS_PASSWORD);
+    }
+
+    @After
+    public void cleanUpCredentialStores() {
+        nonEmptyCSUtil.cleanUp();
+        emptyCSUtil1.cleanUp();
+        emptyCSUtil2.cleanUp();
     }
 
     @AfterClass
     public static void cleanUpTests() {
-        nonEmptyCSUtil.cleanUp();
-        emptyCSUtil1.cleanUp();
-        emptyCSUtil2.cleanUp();
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
             public Void run() {
                 Security.removeProvider(wildFlyElytronProvider.getName());
@@ -204,8 +208,10 @@ public class CredentialStoreUpdatesTestCase extends AbstractSubsystemTest {
     public void testCredentialReferenceUpdateExistingEntry() throws Exception {
         String newPassword = "newPassword";
         try {
-
             CredentialStore credentialStore = getCredentialStore();
+            credentialStore.store(EXISTING_ALIAS, new PasswordCredential(ClearPassword.createRaw(ClearPassword.ALGORITHM_CLEAR, EXISTING_PASSWORD.toCharArray())));
+            credentialStore.flush();
+
             assertTrue(credentialStore.exists(EXISTING_ALIAS, PasswordCredential.class));
             PasswordCredential passwordCredential = credentialStore.retrieve(EXISTING_ALIAS, PasswordCredential.class);
             ClearPassword clearPassword = passwordCredential.getPassword(ClearPassword.class);
@@ -226,11 +232,13 @@ public class CredentialStoreUpdatesTestCase extends AbstractSubsystemTest {
         }
     }
 
-    /*@Test
+    @Test
     public void testCredentialReferenceAddNewEntryFromOperation() throws Exception {
         try {
-            addKeyStoreWithCredentialStoreUpdate(KS_NAME, NON_EMPTY_CS_NAME, EXISTING_ALIAS, null, true, false);
             CredentialStore credentialStore = getCredentialStore();
+            credentialStore.store(EXISTING_ALIAS, new PasswordCredential(ClearPassword.createRaw(ClearPassword.ALGORITHM_CLEAR, EXISTING_PASSWORD.toCharArray())));
+            credentialStore.flush();
+            addKeyStoreWithCredentialStoreUpdate(KS_NAME, NON_EMPTY_CS_NAME, EXISTING_ALIAS, null, true, false);
 
             String alias = "newAlias";
             String password = "newPassword";
@@ -252,8 +260,10 @@ public class CredentialStoreUpdatesTestCase extends AbstractSubsystemTest {
     @Test
     public void testCredentialReferenceAddNewEntryWithGeneratedAliasFromOperation() throws Exception {
         try {
-            addKeyStoreWithCredentialStoreUpdate(KS_NAME, NON_EMPTY_CS_NAME, EXISTING_ALIAS, null, true, false);
             CredentialStore credentialStore = getCredentialStore();
+            credentialStore.store(EXISTING_ALIAS, new PasswordCredential(ClearPassword.createRaw(ClearPassword.ALGORITHM_CLEAR, EXISTING_PASSWORD.toCharArray())));
+            credentialStore.flush();
+            addKeyStoreWithCredentialStoreUpdate(KS_NAME, NON_EMPTY_CS_NAME, EXISTING_ALIAS, null, true, false);
 
             String password = "newPassword";
             int numAliases = credentialStore.getAliases().size();
@@ -270,7 +280,7 @@ public class CredentialStoreUpdatesTestCase extends AbstractSubsystemTest {
         }
     }
 
-    @Test
+    /*@Test
     public void testCredentialReferenceUpdateExistingEntryFromOperation() throws Exception {
         try {
             addKeyStoreWithCredentialStoreUpdate(KS_NAME, EMPTY_CS_NAME1, "alias1", "secret", false, false);
@@ -299,8 +309,10 @@ public class CredentialStoreUpdatesTestCase extends AbstractSubsystemTest {
     @Test
     public void testCredentialReferenceNoUpdate() throws Exception {
         try {
-
             CredentialStore credentialStore = getCredentialStore();
+            credentialStore.store(EXISTING_ALIAS, new PasswordCredential(ClearPassword.createRaw(ClearPassword.ALGORITHM_CLEAR, EXISTING_PASSWORD.toCharArray())));
+            credentialStore.flush();
+
             assertTrue(credentialStore.exists(EXISTING_ALIAS, PasswordCredential.class));
             PasswordCredential passwordCredential = credentialStore.retrieve(EXISTING_ALIAS, PasswordCredential.class);
             ClearPassword clearPassword = passwordCredential.getPassword(ClearPassword.class);
