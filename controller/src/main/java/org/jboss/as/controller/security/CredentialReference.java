@@ -704,7 +704,7 @@ public final class CredentialReference {
             if (serviceBuilder != null) {
                 serviceBuilder.requires(credentialStoreServiceName);
 
-                CredentialStoreUpdateService credentialStoreUpdateService = new CredentialStoreUpdateService(credentialAlias, secret, context.getResult().get(CREDENTIAL_STORE_UPDATE));
+                CredentialStoreUpdateService credentialStoreUpdateService = new CredentialStoreUpdateService(credentialAlias, secret, context.getResult());
                 ServiceBuilder<CredentialStoreUpdateService> credentialStoreUpdateServiceBuilder = context.getServiceTarget().addService(credentialStoreUpdateServiceName, credentialStoreUpdateService).setInitialMode(ServiceController.Mode.ACTIVE);
                 credentialStoreUpdateServiceBuilder.addDependency(context.getCapabilityServiceName(credentialStoreCapabilityName, CredentialStore.class), CredentialStore.class, credentialStoreUpdateService.getCredentialStoreInjector());
                 credentialStoreUpdateServiceBuilder.install();
@@ -712,7 +712,7 @@ public final class CredentialReference {
             } else {
                 CredentialStoreUpdateService service = (CredentialStoreUpdateService) context.getServiceRegistry(true).getRequiredService(CredentialStoreUpdateService.createServiceName(parent, credentialStoreName)).getValue();
                 try {
-                    service.updateCredentialStore(credentialAlias, secret, context.getResult().get(CREDENTIAL_STORE_UPDATE));
+                    service.updateCredentialStore(credentialAlias, secret, context.getResult());
                 } catch (CredentialStoreException e) {
                     throw new OperationFailedException(e);
                 }

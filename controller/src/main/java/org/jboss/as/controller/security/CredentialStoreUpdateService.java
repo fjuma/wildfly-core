@@ -19,6 +19,7 @@
 
 package org.jboss.as.controller.security;
 
+import static org.jboss.as.controller.security.CredentialReference.CREDENTIAL_STORE_UPDATE;
 import static org.jboss.as.controller.security.CredentialReference.EXISTING_ENTRY_UPDATED;
 import static org.jboss.as.controller.security.CredentialReference.NEW_ALIAS;
 import static org.jboss.as.controller.security.CredentialReference.NEW_ENTRY_ADDED;
@@ -88,11 +89,12 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
             CredentialStore credentialStore = injectedCredentialStore.getValue();
             boolean exists = credentialStore.exists(alias, PasswordCredential.class);
             CredentialReference.storeSecret(credentialStore, alias, secret);
+            ModelNode credentialStoreUpdateResult = result.get(CREDENTIAL_STORE_UPDATE);
             if (exists) {
-                result.get(STATUS).set(EXISTING_ENTRY_UPDATED);
+                credentialStoreUpdateResult.get(STATUS).set(EXISTING_ENTRY_UPDATED);
             } else {
-                result.get(STATUS).set(NEW_ENTRY_ADDED);
-                result.get(NEW_ALIAS).set(alias);
+                credentialStoreUpdateResult.get(STATUS).set(NEW_ENTRY_ADDED);
+                credentialStoreUpdateResult.get(NEW_ALIAS).set(alias);
             }
         }
     }

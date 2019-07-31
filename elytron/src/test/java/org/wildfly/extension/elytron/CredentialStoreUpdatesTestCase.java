@@ -226,7 +226,106 @@ public class CredentialStoreUpdatesTestCase extends AbstractSubsystemTest {
         }
     }
 
+    /*@Test
+    public void testCredentialReferenceAddNewEntryFromOperation() throws Exception {
+        try {
+            addKeyStoreWithCredentialStoreUpdate(KS_NAME, NON_EMPTY_CS_NAME, EXISTING_ALIAS, null, true, false);
+            CredentialStore credentialStore = getCredentialStore();
+
+            String alias = "newAlias";
+            String password = "newPassword";
+            assertFalse(credentialStore.exists(alias, PasswordCredential.class));
+            int numAliases = credentialStore.getAliases().size();
+
+            // specify a credential-reference when executing a key-store operation
+            generateKeyPairWithCredentialStoreUpdate(KS_NAME, NON_EMPTY_CS_NAME, alias, password, false);
+            assertEquals(numAliases + 1, credentialStore.getAliases().size());
+            assertTrue(credentialStore.exists(alias, PasswordCredential.class));
+            PasswordCredential passwordCredential = credentialStore.retrieve(alias, PasswordCredential.class);
+            ClearPassword clearPassword = passwordCredential.getPassword(ClearPassword.class);
+            assertTrue(Arrays.equals(password.toCharArray(), clearPassword.getPassword()));
+        } finally {
+            removeKeyStore(KS_NAME);
+        }
+    }
+
+    @Test
+    public void testCredentialReferenceAddNewEntryWithGeneratedAliasFromOperation() throws Exception {
+        try {
+            addKeyStoreWithCredentialStoreUpdate(KS_NAME, NON_EMPTY_CS_NAME, EXISTING_ALIAS, null, true, false);
+            CredentialStore credentialStore = getCredentialStore();
+
+            String password = "newPassword";
+            int numAliases = credentialStore.getAliases().size();
+
+            // specify a credential-reference when executing a key-store operation
+            String generatedAlias = generateKeyPairWithCredentialStoreUpdate(KS_NAME, NON_EMPTY_CS_NAME, null, password, false);
+            assertEquals(numAliases + 1, credentialStore.getAliases().size());
+            assertTrue(credentialStore.exists(generatedAlias, PasswordCredential.class));
+            PasswordCredential passwordCredential = credentialStore.retrieve(generatedAlias, PasswordCredential.class);
+            ClearPassword clearPassword = passwordCredential.getPassword(ClearPassword.class);
+            assertTrue(Arrays.equals(password.toCharArray(), clearPassword.getPassword()));
+        } finally {
+            removeKeyStore(KS_NAME);
+        }
+    }
+
+    @Test
+    public void testCredentialReferenceUpdateExistingEntryFromOperation() throws Exception {
+        try {
+            addKeyStoreWithCredentialStoreUpdate(KS_NAME, EMPTY_CS_NAME1, "alias1", "secret", false, false);
+
+            CredentialStore credentialStore = getCredentialStore();
+            String password = "newPassword";
+            int numAliases = credentialStore.getAliases().size();
+            assertTrue(credentialStore.exists(EXISTING_ALIAS, PasswordCredential.class));
+            PasswordCredential passwordCredential = credentialStore.retrieve(EXISTING_ALIAS, PasswordCredential.class);
+            ClearPassword clearPassword = passwordCredential.getPassword(ClearPassword.class);
+            assertTrue(Arrays.equals(EXISTING_PASSWORD.toCharArray(), clearPassword.getPassword()));
+
+            // specify a credential-reference when executing a key-store operation
+            String generatedAlias = generateKeyPairWithCredentialStoreUpdate(KS_NAME, NON_EMPTY_CS_NAME, EXISTING_ALIAS, password, true);
+
+            assertEquals(numAliases, credentialStore.getAliases().size());
+            assertTrue(credentialStore.exists(EXISTING_ALIAS, PasswordCredential.class));
+            passwordCredential = credentialStore.retrieve(generatedAlias, PasswordCredential.class);
+            clearPassword = passwordCredential.getPassword(ClearPassword.class);
+            assertTrue(Arrays.equals(password.toCharArray(), clearPassword.getPassword()));
+        } finally {
+            removeKeyStore(KS_NAME);
+        }
+    }*/
+
+    @Test
+    public void testCredentialReferenceNoUpdate() throws Exception {
+        try {
+
+            CredentialStore credentialStore = getCredentialStore();
+            assertTrue(credentialStore.exists(EXISTING_ALIAS, PasswordCredential.class));
+            PasswordCredential passwordCredential = credentialStore.retrieve(EXISTING_ALIAS, PasswordCredential.class);
+            ClearPassword clearPassword = passwordCredential.getPassword(ClearPassword.class);
+            assertTrue(Arrays.equals(EXISTING_PASSWORD.toCharArray(), clearPassword.getPassword()));
+            int numAliases = credentialStore.getAliases().size();
+
+            addKeyStoreWithCredentialStoreUpdate(KS_NAME, NON_EMPTY_CS_NAME, EXISTING_ALIAS, null, true);
+            assertEquals(numAliases, credentialStore.getAliases().size());
+            assertTrue(credentialStore.exists(EXISTING_ALIAS, PasswordCredential.class));
+            passwordCredential = credentialStore.retrieve(EXISTING_ALIAS, PasswordCredential.class);
+            clearPassword = passwordCredential.getPassword(ClearPassword.class);
+            assertTrue(Arrays.equals(EXISTING_PASSWORD.toCharArray(), clearPassword.getPassword()));
+
+            assertEquals(null, readAttribute(KS_NAME, CLEAR_TEXT_ATTRIBUTE_NAME));
+            assertEquals(EXISTING_ALIAS, readAttribute(KS_NAME, ALIAS_ATTRIBUTE_NAME));
+        } finally {
+            removeKeyStore(KS_NAME);
+        }
+    }
+
     private String addKeyStoreWithCredentialStoreUpdate(String keyStoreName, String store, String alias, String secret, boolean exists) throws Exception {
+        return addKeyStoreWithCredentialStoreUpdate(keyStoreName, store, alias, secret, exists, true);
+    }
+
+    private String addKeyStoreWithCredentialStoreUpdate(String keyStoreName, String store, String alias, String secret, boolean exists, boolean validateResponse) throws Exception {
         Path resources = Paths.get(KeyStoresTestCase.class.getResource(".").toURI());
         ModelNode operation = new ModelNode();
         operation.get(ClientConstants.OPERATION_HEADERS).get("allow-resource-service-restart").set(Boolean.TRUE);
@@ -241,8 +340,42 @@ public class CredentialStoreUpdatesTestCase extends AbstractSubsystemTest {
         } else {
             autoGeneratedAlias = true;
         }
-        operation.get(CredentialReference.CREDENTIAL_REFERENCE).get(CLEAR_TEXT).set(secret);
+        if (secret != null) {
+            operation.get(CredentialReference.CREDENTIAL_REFERENCE).get(CLEAR_TEXT).set(secret);
+        }
         ModelNode response = assertSuccess(services.executeOperation(operation)).get(RESULT);
+        if (validateResponse) {
+            return validateResponse(response, secret, autoGeneratedAlias, exists);
+        } else {
+            return null;
+        }
+    }
+
+    private String generateKeyPairWithCredentialStoreUpdate(String keyStoreName, String store, String alias, String secret, boolean exists) {
+        ModelNode operation = new ModelNode();
+        operation.get(ClientConstants.OP_ADDR).add("subsystem", "elytron").add("key-store", keyStoreName);
+        operation.get(ClientConstants.OP).set(ElytronDescriptionConstants.GENERATE_KEY_PAIR);
+        operation.get(ElytronDescriptionConstants.ALIAS).set("bsmith");
+        operation.get(ElytronDescriptionConstants.DISTINGUISHED_NAME).set("CN=bob smith");
+        operation.get(CredentialReference.CREDENTIAL_REFERENCE).get(CredentialReference.STORE).set(store);
+        boolean autoGeneratedAlias = false;
+        if (alias != null) {
+            operation.get(CredentialReference.CREDENTIAL_REFERENCE).get(CredentialReference.ALIAS).set(alias);
+        } else {
+            autoGeneratedAlias = true;
+        }
+        if (secret != null) {
+            operation.get(CredentialReference.CREDENTIAL_REFERENCE).get(CredentialReference.CLEAR_TEXT).set(secret);
+        }
+        ModelNode response = assertSuccess(services.executeOperation(operation)).get(RESULT);
+        return validateResponse(response, secret, autoGeneratedAlias, exists);
+    }
+
+    private String validateResponse(ModelNode response, String secret, boolean autoGeneratedAlias, boolean exists) {
+        if (secret == null) {
+            assertFalse(response.isDefined());
+            return null;
+        }
         ModelNode credentialStoreUpdate = response.get(CredentialReference.CREDENTIAL_STORE_UPDATE);
         if (! exists) {
             assertTrue(credentialStoreUpdate.get(CredentialReference.STATUS).asString().equals(CredentialReference.NEW_ENTRY_ADDED));
