@@ -222,41 +222,4 @@ public class SubsystemTransformerTestCase extends AbstractSubsystemBaseTest {
         ModelTestUtils.checkFailedTransformedBootOperations(mainServices, elytronVersion, ops, config);
     }
 
-    /*private void checkRejectCredentialReferenceWithStoreAndClearText(KernelServices mainServices, ModelVersion version, String type, String name) throws OperationFailedException {
-        ModelNode operation = new ModelNode();
-        operation.get(OP).set(WRITE_ATTRIBUTE_OPERATION);
-        ModelNode address = new ModelNode();
-        address.add(SUBSYSTEM, ElytronExtension.SUBSYSTEM_NAME);
-        address.add
-        address.add(type, name);
-        operation.get(OP_ADDR).set(address);
-        operation.get(NAME).set(org.jboss.as.remoting.CommonAttributes.PROTOCOL);
-        operation.get(VALUE).set(Protocol.HTTP_REMOTING.toString());
-
-        checkReject(operation, mainServices, version);
-
-        PathAddress addr = PathAddress.pathAddress(operation.get(OP_ADDR));
-        PathElement element = addr.getLastElement();
-        addr = addr.subAddress(0, addr.size() - 1);
-        addr = addr.append(PathElement.pathElement(element.getKey(), "remoting-outbound2"));
-
-        operation = Util.createAddOperation(addr);
-        operation.get(org.jboss.as.remoting.CommonAttributes.OUTBOUND_SOCKET_BINDING_REF).set("dummy-outbound-socket");
-        operation.get(org.jboss.as.remoting.CommonAttributes.USERNAME).set("myuser");
-        operation.get(org.jboss.as.remoting.CommonAttributes.PROTOCOL).set(Protocol.HTTP_REMOTING.toString());
-        checkReject(operation, mainServices, version);
-
-    }
-
-
-    private void checkReject(ModelNode operation, KernelServices mainServices, ModelVersion version) throws OperationFailedException {
-
-        ModelNode mainResult = mainServices.executeOperation(operation);
-        assertEquals(mainResult.toJSONString(true), SUCCESS, mainResult.get(OUTCOME).asString());
-
-        final OperationTransformer.TransformedOperation op = mainServices.transformOperation(version, operation);
-        final ModelNode result = mainServices.executeOperation(version, op);
-        assertEquals("should reject the operation", FAILED, result.get(OUTCOME).asString());
-    }*/
-
 }
