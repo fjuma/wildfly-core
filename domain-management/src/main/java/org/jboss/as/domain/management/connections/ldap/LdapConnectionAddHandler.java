@@ -86,7 +86,7 @@ public class LdapConnectionAddHandler extends AbstractAddStepHandler {
     protected void populateModel(final OperationContext context, final ModelNode operation, final Resource resource) throws  OperationFailedException {
         super.populateModel(context, operation, resource);
         final ModelNode model = resource.getModel();
-        updateCredentialReference(context, model.get(SEARCH_CREDENTIAL_REFERENCE.getName()));
+        updateCredentialReference(context, model.get(SEARCH_CREDENTIAL_REFERENCE.getName()), SEARCH_CREDENTIAL_REFERENCE.getName());
     }
 
     @Override

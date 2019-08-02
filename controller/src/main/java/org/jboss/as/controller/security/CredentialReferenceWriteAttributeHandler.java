@@ -24,7 +24,6 @@ package org.jboss.as.controller.security;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.VALUE;
 import static org.jboss.as.controller.security.CredentialReference.ALIAS;
 import static org.jboss.as.controller.security.CredentialReference.CLEAR_TEXT;
-import static org.jboss.as.controller.security.CredentialReference.CREDENTIAL_REFERENCE;
 import static org.jboss.as.controller.security.CredentialReference.CREDENTIAL_STORE_CAPABILITY;
 import static org.jboss.as.controller.security.CredentialReference.STORE;
 import static org.jboss.as.controller.security.CredentialReference.getCredentialStore;
@@ -54,7 +53,7 @@ public class CredentialReferenceWriteAttributeHandler extends ReloadRequiredWrit
     protected void finishModelStage(OperationContext context, ModelNode operation, String attributeName, ModelNode newValue,
                                     ModelNode oldValue, Resource resource) throws OperationFailedException {
         super.finishModelStage(context, operation, attributeName, newValue, oldValue, resource);
-        updateCredentialReference(context, resource.getModel().get(CREDENTIAL_REFERENCE));
+        updateCredentialReference(context, resource.getModel());
     }
 
     protected boolean applyUpdateToRuntime(OperationContext context, ModelNode operation, String attributeName,

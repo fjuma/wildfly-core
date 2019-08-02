@@ -235,7 +235,7 @@ class DirContextDefinition extends SimpleResourceDefinition {
         protected void populateModel(final OperationContext context, final ModelNode operation, final Resource resource) throws  OperationFailedException {
             super.populateModel(context, operation, resource);
             final ModelNode model = resource.getModel();
-            updateCredentialReference(context, model.get(CredentialReference.CREDENTIAL_REFERENCE));
+            updateCredentialReference(context, model);
         }
 
         protected void performRuntime(final OperationContext context, final ModelNode operation, final ModelNode model) throws OperationFailedException {

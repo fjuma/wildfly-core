@@ -32,7 +32,6 @@ import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.PathAddress;
 import org.jboss.as.controller.capability.RuntimeCapability;
 import org.jboss.as.controller.registry.Resource;
-import org.jboss.as.controller.security.CredentialReference;
 import org.jboss.dmr.ModelNode;
 import org.jboss.msc.service.ServiceController;
 
@@ -73,7 +72,7 @@ public class SecurityRealmChildAddHandler extends SecurityRealmParentRestartHand
             attr.validateAndSet(operation, model);
         }
 
-        updateCredentialReference(context, model.get(CredentialReference.CREDENTIAL_REFERENCE));
+        updateCredentialReference(context, model);
 
         if (!context.isBooting()) {
             if (validateAuthentication) {

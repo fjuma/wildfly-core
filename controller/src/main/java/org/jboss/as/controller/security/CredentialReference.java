@@ -21,6 +21,9 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.StringTokenizer;
 
 import org.jboss.as.controller.AttributeDefinition;
@@ -102,7 +105,7 @@ public final class CredentialReference {
     public static final String EXISTING_ENTRY_UPDATED = "existing-entry-updated";
     public static final String NEW_ALIAS = "new-alias";
 
-    private static final OperationContext.AttachmentKey<String> ACTUAL_CLEAR_TEXT_KEY = OperationContext.AttachmentKey.create(String.class);
+    private static final OperationContext.AttachmentKey<Map<String, String>> ACTUAL_CLEAR_TEXT_VALUES = OperationContext.AttachmentKey.create(Map.class);
 
     private static final SimpleAttributeDefinition credentialStoreAttribute;
     private static final SimpleAttributeDefinition credentialStoreAttribute_1_0;
@@ -666,19 +669,21 @@ public final class CredentialReference {
         ModelNode value = credentialReferenceAttributeDefinition.resolveModelAttribute(context, model);
 
         if (serviceBuilder == null) {
-            updateCredentialReference(context, value);
+            updateCredentialReference(context, value, credentialReferenceAttributeDefinition.getName());
         }
 
         final String credentialStoreName;
         final String credentialAlias;
         final String credentialType;
         final String secret;
+        final String parent = context.getCurrentAddress().getLastElement().getValue();
 
         if (value.isDefined()) {
             credentialStoreName = credentialReferencePartAsStringIfDefined(value, CredentialReference.STORE);
             credentialAlias = credentialReferencePartAsStringIfDefined(value, CredentialReference.ALIAS);
             credentialType = credentialReferencePartAsStringIfDefined(value, CredentialReference.TYPE);
-            secret = context.getAttachment(ACTUAL_CLEAR_TEXT_KEY);
+            Map<String, String> actualClearTextValues = context.getAttachment(ACTUAL_CLEAR_TEXT_VALUES);
+            secret = actualClearTextValues == null ? null : actualClearTextValues.get(getAttachmentMapKey(parent, credentialReferenceAttributeDefinition.getName()));
             //secret = credentialReferencePartAsStringIfDefined(operation.get(CREDENTIAL_REFERENCE), CredentialReference.CLEAR_TEXT);
             //secret = credentialReferencePartAsStringIfDefined(value, CredentialReference.ACTUAL_CLEAR_TEXT);
             //secret = credentialReferencePartAsStringIfDefined((AbstractOperationContext) context.initialOperation)
@@ -697,7 +702,6 @@ public final class CredentialReference {
             credentialStoreServiceName = context.getCapabilityServiceName(credentialStoreCapabilityName, CredentialStore.class);
 
             //String parent = PathAddress.pathAddress(operation.get(ModelDescriptionConstants.ADDRESS)).getLastElement().getValue();
-            String parent = context.getCurrentAddress().getLastElement().getValue();
             ServiceName credentialStoreUpdateServiceName = CredentialStoreUpdateService.createServiceName(parent, credentialStoreName);
             serviceRegistry = context.getServiceRegistry(true);
             if (serviceBuilder != null) {
@@ -910,7 +914,11 @@ public final class CredentialReference {
         }
     }*/
 
-    public static void updateCredentialReference(OperationContext context, ModelNode credentialReference) throws OperationFailedException {
+    public static void updateCredentialReference(OperationContext context, ModelNode model) throws OperationFailedException {
+        updateCredentialReference(context, model.get(CREDENTIAL_REFERENCE), CREDENTIAL_REFERENCE);
+    }
+
+    public static void updateCredentialReference(OperationContext context, ModelNode credentialReference, String credentialReferenceAttributeName) throws OperationFailedException {
         final String credentialStoreName;
         final String credentialType;
         final String secret;
@@ -921,10 +929,15 @@ public final class CredentialReference {
             credentialAlias = credentialReferencePartAsStringIfDefined(credentialReference, ALIAS);
             credentialType = credentialReferencePartAsStringIfDefined(credentialReference, CredentialReference.TYPE);
             secret = credentialReferencePartAsStringIfDefined(credentialReference, CLEAR_TEXT);
-            if (secret != null) {
-                context.attach(ACTUAL_CLEAR_TEXT_KEY, secret);
+            Map<String, String> actualClearTextValues = context.getAttachment(ACTUAL_CLEAR_TEXT_VALUES);
+            //if (secret != null) {
+            if (actualClearTextValues == null) {
+                actualClearTextValues = Collections.synchronizedMap(new HashMap<>());
+                context.attach(ACTUAL_CLEAR_TEXT_VALUES, actualClearTextValues);
             }
-            //credentialReference.get(ACTUAL_CLEAR_TEXT).set(secret);
+            //}
+            String parent = context.getCurrentAddress().getLastElement().getValue();
+            actualClearTextValues.put(getAttachmentMapKey(parent, credentialReferenceAttributeName), secret);
         } else {
             credentialStoreName = null;
             credentialAlias = null;
@@ -957,4 +970,9 @@ public final class CredentialReference {
         }
         return builder.toString();
     }
+
+    private static String getAttachmentMapKey(String parent, String credentialReferenceAttributeName) {
+        return parent + "." + credentialReferenceAttributeName;
+    }
+
 }
