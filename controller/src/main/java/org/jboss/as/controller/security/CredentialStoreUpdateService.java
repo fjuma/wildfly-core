@@ -60,10 +60,12 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
 
     @Override
     public void start(StartContext startContext) throws StartException {
-        try {
-            updateCredentialStore(injectedCredentialStore.getValue(), alias, secret, result);
-        } catch (CredentialStoreException e) {
-            throw new StartException(e);
+        if (alias != null && secret != null) {
+            try {
+                updateCredentialStore(injectedCredentialStore.getValue(), alias, secret, result);
+            } catch (CredentialStoreException e) {
+                throw new StartException(e);
+            }
         }
     }
 

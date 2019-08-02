@@ -23,14 +23,12 @@ import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.StringTokenizer;
 
-//import org.jboss.as.controller.AbstractOperationContext;
 import org.jboss.as.controller.AttributeDefinition;
 import org.jboss.as.controller.AttributeMarshaller;
 import org.jboss.as.controller.AttributeParser;
 import org.jboss.as.controller.CapabilityReferenceRecorder;
 import org.jboss.as.controller.ObjectTypeAttributeDefinition;
 import org.jboss.as.controller.OperationContext;
-//import org.jboss.as.controller.OperationContextImpl;
 import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
@@ -717,11 +715,13 @@ public final class CredentialReference {
                 } catch (CredentialStoreException e) {
                     throw new OperationFailedException(e);
                 }*/
-                CredentialStore credentialStore = getCredentialStore(serviceRegistry, credentialStoreServiceName);
-                try {
-                    updateCredentialStore(credentialStore, credentialAlias, secret, context.getResult());
-                } catch (CredentialStoreException e) {
-                    throw new OperationFailedException(e);
+                if (credentialAlias != null && secret != null) {
+                    CredentialStore credentialStore = getCredentialStore(serviceRegistry, credentialStoreServiceName);
+                    try {
+                        updateCredentialStore(credentialStore, credentialAlias, secret, context.getResult());
+                    } catch (CredentialStoreException e) {
+                        throw new OperationFailedException(e);
+                    }
                 }
             }
         } else {
@@ -864,18 +864,17 @@ public final class CredentialReference {
         }
     }
 
-    public static void updateCredentialStore(CredentialStore credentialStore, String alias, String secret, ModelNode result) throws CredentialStoreException {
-        if (alias != null && secret != null) {
-            boolean exists = credentialStore.exists(alias, PasswordCredential.class);
-            CredentialReference.storeSecret(credentialStore, alias, secret);
-            ModelNode credentialStoreUpdateResult = result.get(CREDENTIAL_STORE_UPDATE);
-            if (exists) {
-                credentialStoreUpdateResult.get(STATUS).set(EXISTING_ENTRY_UPDATED);
-            } else {
-                credentialStoreUpdateResult.get(STATUS).set(NEW_ENTRY_ADDED);
-                credentialStoreUpdateResult.get(NEW_ALIAS).set(alias);
-            }
+    static void updateCredentialStore(CredentialStore credentialStore, String alias, String secret, ModelNode result) throws CredentialStoreException {
+        boolean exists = credentialStore.exists(alias, PasswordCredential.class);
+        storeSecret(credentialStore, alias, secret);
+        ModelNode credentialStoreUpdateResult = result.get(CREDENTIAL_STORE_UPDATE);
+        if (exists) {
+            credentialStoreUpdateResult.get(STATUS).set(EXISTING_ENTRY_UPDATED);
+        } else {
+            credentialStoreUpdateResult.get(STATUS).set(NEW_ENTRY_ADDED);
+            credentialStoreUpdateResult.get(NEW_ALIAS).set(alias);
         }
+
     }
 
     /*public static void updateCredentialReference(ModelNode credentialReference) throws OperationFailedException {
