@@ -19,11 +19,7 @@
 
 package org.jboss.as.controller.security;
 
-import static org.jboss.as.controller.security.CredentialReference.CREDENTIAL_STORE_UPDATE;
-import static org.jboss.as.controller.security.CredentialReference.EXISTING_ENTRY_UPDATED;
-import static org.jboss.as.controller.security.CredentialReference.NEW_ALIAS;
-import static org.jboss.as.controller.security.CredentialReference.NEW_ENTRY_ADDED;
-import static org.jboss.as.controller.security.CredentialReference.STATUS;
+import static org.jboss.as.controller.security.CredentialReference.updateCredentialStore;
 
 import org.jboss.dmr.ModelNode;
 import org.jboss.msc.inject.Injector;
@@ -33,7 +29,6 @@ import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
 import org.jboss.msc.value.InjectedValue;
-import org.wildfly.security.credential.PasswordCredential;
 import org.wildfly.security.credential.store.CredentialStore;
 import org.wildfly.security.credential.store.CredentialStoreException;
 
@@ -66,7 +61,7 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
     @Override
     public void start(StartContext startContext) throws StartException {
         try {
-            updateCredentialStore(alias, secret, result);
+            updateCredentialStore(injectedCredentialStore.getValue(), alias, secret, result);
         } catch (CredentialStoreException e) {
             throw new StartException(e);
         }
@@ -82,21 +77,6 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
     @Override
     public synchronized CredentialStoreUpdateService getValue() throws IllegalStateException, IllegalArgumentException {
         return this;
-    }
-
-    public void updateCredentialStore(String alias, String secret, ModelNode result) throws CredentialStoreException {
-        if (alias != null && secret != null) {
-            CredentialStore credentialStore = injectedCredentialStore.getValue();
-            boolean exists = credentialStore.exists(alias, PasswordCredential.class);
-            CredentialReference.storeSecret(credentialStore, alias, secret);
-            ModelNode credentialStoreUpdateResult = result.get(CREDENTIAL_STORE_UPDATE);
-            if (exists) {
-                credentialStoreUpdateResult.get(STATUS).set(EXISTING_ENTRY_UPDATED);
-            } else {
-                credentialStoreUpdateResult.get(STATUS).set(NEW_ENTRY_ADDED);
-                credentialStoreUpdateResult.get(NEW_ALIAS).set(alias);
-            }
-        }
     }
 
     Injector<CredentialStore> getCredentialStoreInjector() {

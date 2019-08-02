@@ -25,17 +25,23 @@ import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.VAL
 import static org.jboss.as.controller.security.CredentialReference.ALIAS;
 import static org.jboss.as.controller.security.CredentialReference.CLEAR_TEXT;
 import static org.jboss.as.controller.security.CredentialReference.CREDENTIAL_REFERENCE;
+import static org.jboss.as.controller.security.CredentialReference.CREDENTIAL_STORE_CAPABILITY;
+import static org.jboss.as.controller.security.CredentialReference.STORE;
+import static org.jboss.as.controller.security.CredentialReference.getCredentialStore;
 import static org.jboss.as.controller.security.CredentialReference.updateCredentialReference;
+import static org.jboss.as.controller.security.CredentialReference.updateCredentialStore;
 
 import org.jboss.as.controller.ObjectTypeAttributeDefinition;
 import org.jboss.as.controller.OperationContext;
 import org.jboss.as.controller.OperationFailedException;
-import org.jboss.as.controller.PathAddress;
 import org.jboss.as.controller.ProcessType;
 import org.jboss.as.controller.ReloadRequiredWriteAttributeHandler;
+import org.jboss.as.controller.capability.RuntimeCapability;
 import org.jboss.as.controller.descriptions.ModelDescriptionConstants;
 import org.jboss.as.controller.registry.Resource;
 import org.jboss.dmr.ModelNode;
+import org.jboss.msc.service.ServiceName;
+import org.wildfly.security.credential.store.CredentialStore;
 import org.wildfly.security.credential.store.CredentialStoreException;
 
 public class CredentialReferenceWriteAttributeHandler extends ReloadRequiredWriteAttributeHandler {
@@ -54,15 +60,24 @@ public class CredentialReferenceWriteAttributeHandler extends ReloadRequiredWrit
     protected boolean applyUpdateToRuntime(OperationContext context, ModelNode operation, String attributeName,
                                            ModelNode resolvedValue, ModelNode currentValue,
                                            HandbackHolder<Void> handbackHolder) throws OperationFailedException {
+        final String store = CredentialReference.credentialReferencePartAsStringIfDefined(resolvedValue, STORE);
         final String alias = CredentialReference.credentialReferencePartAsStringIfDefined(resolvedValue, ALIAS);
         final String secret = CredentialReference.credentialReferencePartAsStringIfDefined(operation.get(VALUE), CLEAR_TEXT);
 
         if (alias != null && secret != null) {
-            final String parentName = PathAddress.pathAddress(operation.get(ModelDescriptionConstants.ADDRESS)).getLastElement().getValue();
+            /*final String parentName = PathAddress.pathAddress(operation.get(ModelDescriptionConstants.ADDRESS)).getLastElement().getValue();
             final String credentialStoreName = CredentialReference.credentialReferencePartAsStringIfDefined(resolvedValue, CredentialReference.STORE);
             CredentialStoreUpdateService service = (CredentialStoreUpdateService) context.getServiceRegistry(true).getRequiredService(CredentialStoreUpdateService.createServiceName(parentName, credentialStoreName)).getValue();
             try {
                 service.updateCredentialStore(alias, secret, context.getResult());
+            } catch (CredentialStoreException e) {
+                throw new OperationFailedException(e);
+            }*/
+            final String credentialStoreCapabilityName = RuntimeCapability.buildDynamicCapabilityName(CREDENTIAL_STORE_CAPABILITY, store);
+            final ServiceName credentialStoreServiceName = context.getCapabilityServiceName(credentialStoreCapabilityName, CredentialStore.class);
+            final CredentialStore credentialStore = getCredentialStore(context.getServiceRegistry(true), credentialStoreServiceName);
+            try {
+                updateCredentialStore(credentialStore, alias, secret, context.getResult());
             } catch (CredentialStoreException e) {
                 throw new OperationFailedException(e);
             }

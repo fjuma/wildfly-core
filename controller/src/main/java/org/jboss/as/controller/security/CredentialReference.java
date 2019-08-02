@@ -701,6 +701,7 @@ public final class CredentialReference {
             //String parent = PathAddress.pathAddress(operation.get(ModelDescriptionConstants.ADDRESS)).getLastElement().getValue();
             String parent = context.getCurrentAddress().getLastElement().getValue();
             ServiceName credentialStoreUpdateServiceName = CredentialStoreUpdateService.createServiceName(parent, credentialStoreName);
+            serviceRegistry = context.getServiceRegistry(true);
             if (serviceBuilder != null) {
                 serviceBuilder.requires(credentialStoreServiceName);
 
@@ -710,14 +711,19 @@ public final class CredentialReference {
                 credentialStoreUpdateServiceBuilder.install();
                 serviceBuilder.requires(credentialStoreUpdateServiceName);
             } else {
-                CredentialStoreUpdateService service = (CredentialStoreUpdateService) context.getServiceRegistry(true).getRequiredService(CredentialStoreUpdateService.createServiceName(parent, credentialStoreName)).getValue();
+                /*CredentialStoreUpdateService service = (CredentialStoreUpdateService) context.getServiceRegistry(true).getRequiredService(CredentialStoreUpdateService.createServiceName(parent, credentialStoreName)).getValue();
                 try {
                     service.updateCredentialStore(credentialAlias, secret, context.getResult());
                 } catch (CredentialStoreException e) {
                     throw new OperationFailedException(e);
+                }*/
+                CredentialStore credentialStore = getCredentialStore(serviceRegistry, credentialStoreServiceName);
+                try {
+                    updateCredentialStore(credentialStore, credentialAlias, secret, context.getResult());
+                } catch (CredentialStoreException e) {
+                    throw new OperationFailedException(e);
                 }
             }
-            serviceRegistry = context.getServiceRegistry(false);
         } else {
             credentialStoreServiceName = null;
             serviceRegistry = null;
@@ -831,12 +837,18 @@ public final class CredentialReference {
         };
     }
 
-    static <T> ServiceController<T> getRequiredService(ServiceRegistry serviceRegistry, ServiceName serviceName, Class<T> serviceType) {
+    /*static <T> ServiceController<T> getRequiredService(ServiceRegistry serviceRegistry, ServiceName serviceName) {
         ServiceController<?> controller = serviceRegistry.getRequiredService(serviceName);
         return (ServiceController<T>) controller;
+    }*/
+
+    static CredentialStore getCredentialStore(ServiceRegistry serviceRegistry, ServiceName serviceName) {
+        ServiceController<?> controller = serviceRegistry.getRequiredService(serviceName);
+        ServiceController<CredentialStore> serviceContainer = (ServiceController<CredentialStore>) serviceRegistry.getRequiredService(serviceName);
+        return serviceContainer.getService().getValue();
     }
 
-    static void storeSecret(CredentialStore credentialStore, String alias, String secretValue) throws CredentialStoreException {
+    private static void storeSecret(CredentialStore credentialStore, String alias, String secretValue) throws CredentialStoreException {
         if (alias != null && secretValue != null) {
             char[] secret = secretValue != null ? secretValue.toCharArray() : new char[0];
             Password clearPassword = ClearPassword.createRaw(ClearPassword.ALGORITHM_CLEAR, secret);
@@ -848,6 +860,20 @@ public final class CredentialReference {
                 // the store on the FS and in the memory
                 credentialStore.remove(alias, PasswordCredential.class);
                 throw e;
+            }
+        }
+    }
+
+    public static void updateCredentialStore(CredentialStore credentialStore, String alias, String secret, ModelNode result) throws CredentialStoreException {
+        if (alias != null && secret != null) {
+            boolean exists = credentialStore.exists(alias, PasswordCredential.class);
+            CredentialReference.storeSecret(credentialStore, alias, secret);
+            ModelNode credentialStoreUpdateResult = result.get(CREDENTIAL_STORE_UPDATE);
+            if (exists) {
+                credentialStoreUpdateResult.get(STATUS).set(EXISTING_ENTRY_UPDATED);
+            } else {
+                credentialStoreUpdateResult.get(STATUS).set(NEW_ENTRY_ADDED);
+                credentialStoreUpdateResult.get(NEW_ALIAS).set(alias);
             }
         }
     }

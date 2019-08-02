@@ -280,13 +280,14 @@ public class CredentialStoreUpdatesTestCase extends AbstractSubsystemTest {
         }
     }
 
-    /*@Test
+    @Test
     public void testCredentialReferenceUpdateExistingEntryFromOperation() throws Exception {
         try {
             addKeyStoreWithCredentialStoreUpdate(KS_NAME, EMPTY_CS_NAME1, "alias1", "secret", false, false);
 
             CredentialStore credentialStore = getCredentialStore();
-            String password = "newPassword";
+            credentialStore.store(EXISTING_ALIAS, new PasswordCredential(ClearPassword.createRaw(ClearPassword.ALGORITHM_CLEAR, EXISTING_PASSWORD.toCharArray())));
+            credentialStore.flush();
             int numAliases = credentialStore.getAliases().size();
             assertTrue(credentialStore.exists(EXISTING_ALIAS, PasswordCredential.class));
             PasswordCredential passwordCredential = credentialStore.retrieve(EXISTING_ALIAS, PasswordCredential.class);
@@ -294,17 +295,18 @@ public class CredentialStoreUpdatesTestCase extends AbstractSubsystemTest {
             assertTrue(Arrays.equals(EXISTING_PASSWORD.toCharArray(), clearPassword.getPassword()));
 
             // specify a credential-reference when executing a key-store operation
-            String generatedAlias = generateKeyPairWithCredentialStoreUpdate(KS_NAME, NON_EMPTY_CS_NAME, EXISTING_ALIAS, password, true);
+            String password = "newPassword";
+            generateKeyPairWithCredentialStoreUpdate(KS_NAME, NON_EMPTY_CS_NAME, EXISTING_ALIAS, password, true);
 
             assertEquals(numAliases, credentialStore.getAliases().size());
             assertTrue(credentialStore.exists(EXISTING_ALIAS, PasswordCredential.class));
-            passwordCredential = credentialStore.retrieve(generatedAlias, PasswordCredential.class);
+            passwordCredential = credentialStore.retrieve(EXISTING_ALIAS, PasswordCredential.class);
             clearPassword = passwordCredential.getPassword(ClearPassword.class);
             assertTrue(Arrays.equals(password.toCharArray(), clearPassword.getPassword()));
         } finally {
             removeKeyStore(KS_NAME);
         }
-    }*/
+    }
 
     @Test
     public void testCredentialReferenceNoUpdate() throws Exception {
