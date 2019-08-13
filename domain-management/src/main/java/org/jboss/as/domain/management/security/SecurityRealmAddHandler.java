@@ -108,6 +108,7 @@ public class SecurityRealmAddHandler extends AbstractAddStepHandler {
 
     private static final String ELYTRON_CAPABILITY = "org.wildfly.security.elytron";
     private static final String PATH_MANAGER_CAPABILITY = "org.wildfly.management.path-manager";
+    private static final String KEY_DELIMITER = "/";
 
     public static final SecurityRealmAddHandler INSTANCE = new SecurityRealmAddHandler();
 
@@ -890,7 +891,8 @@ public class SecurityRealmAddHandler extends AbstractAddStepHandler {
             // Don't use the value from property as it is a clone and does not update the returned users ModelNode.
             ModelNode user = users.get(USER, property.getName());
             if (user.hasDefined(CredentialReference.CREDENTIAL_REFERENCE)) {
-                suppliers.put(property.getName(), CredentialReference.getCredentialSourceSupplier(context, UserResourceDefinition.CREDENTIAL_REFERENCE, user, serviceBuilder, property.getName()));
+                String key = context.getCurrentAddress().toPathStyleString() + KEY_DELIMITER + AUTHENTICATION + KEY_DELIMITER + USERS + KEY_DELIMITER + USER + KEY_DELIMITER + property.getName();
+                suppliers.put(property.getName(), CredentialReference.getCredentialSourceSupplier(context, UserResourceDefinition.CREDENTIAL_REFERENCE, user, serviceBuilder, key));
             }
         }
         return suppliers;

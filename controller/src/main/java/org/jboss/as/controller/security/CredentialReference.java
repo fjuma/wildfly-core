@@ -336,7 +336,7 @@ public final class CredentialReference {
         final String credentialAlias;
         final String credentialType;
         final String secret;
-        final String parent = context.getCurrentAddress().getLastElement().getValue();
+        final String parent = context.getCurrentAddress().toPathStyleString();//context.getCurrentAddress().getLastElement().getValue();
 
         if (value.isDefined()) {
             credentialStoreName = credentialReferencePartAsStringIfDefined(value, CredentialReference.STORE);
@@ -551,7 +551,9 @@ public final class CredentialReference {
                 actualClearTextValues = Collections.synchronizedMap(new HashMap<>());
                 context.attach(ACTUAL_CLEAR_TEXT_VALUES, actualClearTextValues);
             }
-            actualClearTextValues.put(getAttachmentMapKey(credentialReferenceParentName != null ? credentialReferenceParentName : context.getCurrentAddress().getLastElement().getValue(),
+            //actualClearTextValues.put(getAttachmentMapKey(credentialReferenceParentName != null ? credentialReferenceParentName : context.getCurrentAddress().getLastElement().getValue(),
+            //        credentialReferenceAttributeName), secret);
+            actualClearTextValues.put(getAttachmentMapKey(credentialReferenceParentName != null ? credentialReferenceParentName : context.getCurrentAddress().toPathStyleString(),
                     credentialReferenceAttributeName), secret);
         } else {
             credentialStoreName = null;
