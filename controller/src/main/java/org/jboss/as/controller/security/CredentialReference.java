@@ -102,6 +102,8 @@ public final class CredentialReference {
     public static final String EXISTING_ENTRY_UPDATED = "existing-entry-updated";
     public static final String NEW_ALIAS = "new-alias";
 
+    public static final String KEY_DELIMITER = ".";
+
     private static final OperationContext.AttachmentKey<Map<String, String>> ACTUAL_CLEAR_TEXT_VALUES = OperationContext.AttachmentKey.create(Map.class);
 
     private static final SimpleAttributeDefinition credentialStoreAttribute;
@@ -321,11 +323,12 @@ public final class CredentialReference {
      * @param credentialReferenceAttributeDefinition credential-reference attribute definition
      * @param model containing the actual values
      * @param serviceBuilder of service which needs the credential
-     * @param credentialReferenceParentName the credential reference parent name
+     * @param keySuffix extra path elements
      * @return ExceptionSupplier of CredentialSource
      * @throws OperationFailedException wrapping exception when something goes wrong
      */
-    public static ExceptionSupplier<CredentialSource, Exception> getCredentialSourceSupplier(OperationContext context, ObjectTypeAttributeDefinition credentialReferenceAttributeDefinition, ModelNode model, ServiceBuilder<?> serviceBuilder, String credentialReferenceParentName) throws OperationFailedException {
+    public static ExceptionSupplier<CredentialSource, Exception> getCredentialSourceSupplier(OperationContext context, ObjectTypeAttributeDefinition credentialReferenceAttributeDefinition, ModelNode model, ServiceBuilder<?> serviceBuilder, String keySuffix
+    ) throws OperationFailedException {
         ModelNode value = credentialReferenceAttributeDefinition.resolveModelAttribute(context, model);
 
         if (serviceBuilder == null) {
@@ -336,14 +339,16 @@ public final class CredentialReference {
         final String credentialAlias;
         final String credentialType;
         final String secret;
-        final String parent = context.getCurrentAddress().toPathStyleString();//context.getCurrentAddress().getLastElement().getValue();
+        //final String parent = context.getCurrentAddress().toPathStyleString();//context.getCurrentAddress().getLastElement().getValue();
+        final String key = getAttachmentMapKey(context, keySuffix, credentialReferenceAttributeDefinition.getName());
 
         if (value.isDefined()) {
             credentialStoreName = credentialReferencePartAsStringIfDefined(value, CredentialReference.STORE);
             credentialAlias = credentialReferencePartAsStringIfDefined(value, CredentialReference.ALIAS);
             credentialType = credentialReferencePartAsStringIfDefined(value, CredentialReference.TYPE);
             Map<String, String> actualClearTextValues = context.getAttachment(ACTUAL_CLEAR_TEXT_VALUES);
-            secret = actualClearTextValues == null ? null : actualClearTextValues.get(getAttachmentMapKey(credentialReferenceParentName != null ? credentialReferenceParentName : parent, credentialReferenceAttributeDefinition.getName()));
+            //secret = actualClearTextValues == null ? null : actualClearTextValues.get(getAttachmentMapKey(credentialReferenceParentName != null ? credentialReferenceParentName : parent, credentialReferenceAttributeDefinition.getName()));
+            secret = actualClearTextValues == null ? null : actualClearTextValues.get(getAttachmentMapKey(context, keySuffix, credentialReferenceAttributeDefinition.getName()));
         } else {
             credentialStoreName = null;
             credentialAlias = null;
@@ -358,7 +363,7 @@ public final class CredentialReference {
             String credentialStoreCapabilityName = RuntimeCapability.buildDynamicCapabilityName(CREDENTIAL_STORE_CAPABILITY, credentialStoreName);
             credentialStoreServiceName = context.getCapabilityServiceName(credentialStoreCapabilityName, CredentialStore.class);
 
-            ServiceName credentialStoreUpdateServiceName = CredentialStoreUpdateService.createServiceName(parent, credentialStoreName);
+            ServiceName credentialStoreUpdateServiceName = CredentialStoreUpdateService.createServiceName(key, credentialStoreName);
             serviceRegistry = context.getServiceRegistry(true);
             if (serviceBuilder != null) {
                 serviceBuilder.requires(credentialStoreServiceName);
@@ -553,8 +558,7 @@ public final class CredentialReference {
             }
             //actualClearTextValues.put(getAttachmentMapKey(credentialReferenceParentName != null ? credentialReferenceParentName : context.getCurrentAddress().getLastElement().getValue(),
             //        credentialReferenceAttributeName), secret);
-            actualClearTextValues.put(getAttachmentMapKey(credentialReferenceParentName != null ? credentialReferenceParentName : context.getCurrentAddress().toPathStyleString(),
-                    credentialReferenceAttributeName), secret);
+            actualClearTextValues.put(getAttachmentMapKey(context, credentialReferenceAttributeName), secret);
         } else {
             credentialStoreName = null;
             credentialAlias = null;
@@ -605,8 +609,22 @@ public final class CredentialReference {
         return builder.toString();
     }
 
-    private static String getAttachmentMapKey(String parent, String credentialReferenceAttributeName) {
-        return parent + "." + credentialReferenceAttributeName;
+
+    private static String getAttachmentMapKey(OperationContext context, String credentialReferenceAttributeName) {
+        return getAttachmentMapKey(context, null, credentialReferenceAttributeName);
     }
 
+    //private static String getAttachmentMapKey(String parent, String credentialReferenceAttributeName) {
+    //    return parent + "." + credentialReferenceAttributeName;
+    //}
+
+    private static String getAttachmentMapKey(OperationContext context, String keySuffix, String credentialReferenceAttributeName) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(context.getCurrentAddress().toPathStyleString().replace("/", KEY_DELIMITER));
+        if (keySuffix != null) {
+            sb.append(KEY_DELIMITER).append(keySuffix);
+        }
+        sb.append(KEY_DELIMITER).append(credentialReferenceAttributeName);
+        return sb.toString();
+    }
 }
