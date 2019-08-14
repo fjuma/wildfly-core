@@ -620,7 +620,7 @@ public final class CredentialReference {
 
     private static String getAttachmentMapKey(OperationContext context, String keySuffix, String credentialReferenceAttributeName) {
         StringBuilder sb = new StringBuilder();
-        sb.append(context.getCurrentAddress().toPathStyleString().replace("/", KEY_DELIMITER));
+        sb.append(context.getCurrentAddress().toPathStyleString().replaceFirst("/", "").replace("/", KEY_DELIMITER));
         if (keySuffix != null) {
             sb.append(KEY_DELIMITER).append(keySuffix);
         }
