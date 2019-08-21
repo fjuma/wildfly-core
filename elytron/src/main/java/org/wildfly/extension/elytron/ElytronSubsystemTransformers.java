@@ -16,9 +16,8 @@ limitations under the License.
 
 package org.wildfly.extension.elytron;
 
-import static org.jboss.as.controller.security.CredentialReference.CLEAR_TEXT;
 import static org.jboss.as.controller.security.CredentialReference.CREDENTIAL_REFERENCE;
-import static org.jboss.as.controller.security.CredentialReference.STORE;
+import static org.jboss.as.controller.security.CredentialReference.REJECT_CREDENTIAL_REFERENCE_WITH_BOTH_STORE_AND_CLEAR_TEXT;
 import static org.wildfly.extension.elytron.ElytronDescriptionConstants.ALGORITHM;
 import static org.wildfly.extension.elytron.ElytronDescriptionConstants.AUTOFLUSH;
 import static org.wildfly.extension.elytron.ElytronDescriptionConstants.BCRYPT_MAPPER;
@@ -341,30 +340,6 @@ public final class ElytronSubsystemTransformers implements ExtensionTransformerR
             if (attributeValue.isDefined()) {
                 boolean synced = context.readResourceFromRoot(address).getModel().get(SYNCHRONIZED).asBoolean();
                 return synced != attributeValue.asBoolean();
-            }
-            return false;
-        }
-    };
-
-    private static final RejectAttributeChecker REJECT_CREDENTIAL_REFERENCE_WITH_BOTH_STORE_AND_CLEAR_TEXT = new RejectAttributeChecker.DefaultRejectAttributeChecker() {
-
-        @Override
-        public String getRejectionLogMessage(Map<String, ModelNode> attributes) {
-            return ROOT_LOGGER.invalidAttributeValue(CLEAR_TEXT).getMessage();
-        }
-
-        @Override
-        protected boolean rejectAttribute(PathAddress address, String attributeName, ModelNode attributeValue, TransformationContext context) {
-            if (attributeValue.isDefined()) {
-                String store = null;
-                String secret = null;
-                if (attributeValue.hasDefined(STORE)) {
-                    store = attributeValue.get(STORE).asString();
-                }
-                if (attributeValue.hasDefined(CLEAR_TEXT)) {
-                    secret = attributeValue.get(CLEAR_TEXT).asString();
-                }
-                return store != null && secret != null;
             }
             return false;
         }

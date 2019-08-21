@@ -18,6 +18,7 @@
 package org.jboss.as.controller.security;
 
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.VALUE;
+import static org.jboss.as.controller.logging.ControllerLogger.ROOT_LOGGER;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -35,11 +36,13 @@ import org.jboss.as.controller.CapabilityReferenceRecorder;
 import org.jboss.as.controller.ObjectTypeAttributeDefinition;
 import org.jboss.as.controller.OperationContext;
 import org.jboss.as.controller.OperationFailedException;
+import org.jboss.as.controller.PathAddress;
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
 import org.jboss.as.controller.access.management.SensitiveTargetAccessConstraintDefinition;
 import org.jboss.as.controller.capability.RuntimeCapability;
-import org.jboss.as.controller.logging.ControllerLogger;
+import org.jboss.as.controller.transform.TransformationContext;
+import org.jboss.as.controller.transform.description.RejectAttributeChecker;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
 import org.jboss.msc.service.Service;
@@ -457,14 +460,14 @@ public final class CredentialReference {
                         public <C extends Credential> C getCredential(Class<C> credentialType, String algorithmName, AlgorithmParameterSpec parameterSpec) throws IOException {
                             String[] part = secret.substring(5).split(";");  // strip "MASK-" and split by ';'
                             if (part.length != 3) {
-                                throw ControllerLogger.ROOT_LOGGER.wrongMaskedPasswordFormat();
+                                throw ROOT_LOGGER.wrongMaskedPasswordFormat();
                             }
                             String salt = part[1];
                             final int iterationCount;
                             try {
                                 iterationCount = Integer.parseInt(part[2]);
                             } catch (NumberFormatException e) {
-                                throw ControllerLogger.ROOT_LOGGER.wrongMaskedPasswordFormat();
+                                throw ROOT_LOGGER.wrongMaskedPasswordFormat();
                             }
                             try {
                                 PasswordBasedEncryptionUtil decryptUtil = new PasswordBasedEncryptionUtil.Builder()
@@ -629,4 +632,28 @@ public final class CredentialReference {
         sb.append(KEY_DELIMITER).append(credentialReferenceAttributeName);
         return sb.toString();
     }
+
+    public static final RejectAttributeChecker REJECT_CREDENTIAL_REFERENCE_WITH_BOTH_STORE_AND_CLEAR_TEXT = new RejectAttributeChecker.DefaultRejectAttributeChecker() {
+
+        @Override
+        public String getRejectionLogMessage(Map<String, ModelNode> attributes) {
+            return ROOT_LOGGER.invalidAttributeValue(CLEAR_TEXT).getMessage();
+        }
+
+        @Override
+        protected boolean rejectAttribute(PathAddress address, String attributeName, ModelNode attributeValue, TransformationContext context) {
+            if (attributeValue.isDefined()) {
+                String store = null;
+                String secret = null;
+                if (attributeValue.hasDefined(STORE)) {
+                    store = attributeValue.get(STORE).asString();
+                }
+                if (attributeValue.hasDefined(CLEAR_TEXT)) {
+                    secret = attributeValue.get(CLEAR_TEXT).asString();
+                }
+                return store != null && secret != null;
+            }
+            return false;
+        }
+    };
 }
