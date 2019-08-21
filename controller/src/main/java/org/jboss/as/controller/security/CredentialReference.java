@@ -347,8 +347,12 @@ public final class CredentialReference {
             credentialAlias = credentialReferencePartAsStringIfDefined(value, CredentialReference.ALIAS);
             credentialType = credentialReferencePartAsStringIfDefined(value, CredentialReference.TYPE);
             Map<String, String> actualClearTextValues = context.getAttachment(ACTUAL_CLEAR_TEXT_VALUES);
-            //secret = actualClearTextValues == null ? null : actualClearTextValues.get(getAttachmentMapKey(credentialReferenceParentName != null ? credentialReferenceParentName : parent, credentialReferenceAttributeDefinition.getName()));
-            secret = actualClearTextValues == null ? null : actualClearTextValues.get(getAttachmentMapKey(context, keySuffix, credentialReferenceAttributeDefinition.getName()));
+            //secret = actualClearTextValues == null ? null : actualClearTextValues.get(getAttachmentMapKey(context, keySuffix, credentialReferenceAttributeDefinition.getName()));
+            if (value.hasDefined(CredentialReference.CLEAR_TEXT)) {
+                secret = value.get(CredentialReference.CLEAR_TEXT).asString();
+            } else {
+                secret = actualClearTextValues == null ? null : actualClearTextValues.get(getAttachmentMapKey(context, keySuffix, credentialReferenceAttributeDefinition.getName()));
+            }
         } else {
             credentialStoreName = null;
             credentialAlias = null;
@@ -551,14 +555,6 @@ public final class CredentialReference {
             credentialAlias = credentialReferencePartAsStringIfDefined(credentialReference, ALIAS);
             credentialType = credentialReferencePartAsStringIfDefined(credentialReference, CredentialReference.TYPE);
             secret = credentialReferencePartAsStringIfDefined(credentialReference, CLEAR_TEXT);
-            Map<String, String> actualClearTextValues = context.getAttachment(ACTUAL_CLEAR_TEXT_VALUES);
-            if (actualClearTextValues == null) {
-                actualClearTextValues = Collections.synchronizedMap(new HashMap<>());
-                context.attach(ACTUAL_CLEAR_TEXT_VALUES, actualClearTextValues);
-            }
-            //actualClearTextValues.put(getAttachmentMapKey(credentialReferenceParentName != null ? credentialReferenceParentName : context.getCurrentAddress().getLastElement().getValue(),
-            //        credentialReferenceAttributeName), secret);
-            actualClearTextValues.put(getAttachmentMapKey(context, credentialReferenceAttributeName), secret);
         } else {
             credentialStoreName = null;
             credentialAlias = null;
@@ -575,6 +571,12 @@ public final class CredentialReference {
                 removeSecret = true;
             }
             if (removeSecret) {
+                Map<String, String> actualClearTextValues = context.getAttachment(ACTUAL_CLEAR_TEXT_VALUES);
+                if (actualClearTextValues == null) {
+                    actualClearTextValues = Collections.synchronizedMap(new HashMap<>());
+                    context.attach(ACTUAL_CLEAR_TEXT_VALUES, actualClearTextValues);
+                }
+                actualClearTextValues.put(getAttachmentMapKey(context, credentialReferenceAttributeName), secret);
                 credentialReference.get(CLEAR_TEXT).set(new ModelNode());
             }
         }
