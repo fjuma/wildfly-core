@@ -24,7 +24,7 @@ package org.jboss.as.controller.security;
 import static org.jboss.as.controller.security.CredentialReference.applyCredentialReferenceUpdateToRuntime;
 import static org.jboss.as.controller.security.CredentialReference.handleCredentialReferenceUpdate;
 
-import org.jboss.as.controller.ObjectTypeAttributeDefinition;
+import org.jboss.as.controller.AttributeDefinition;
 import org.jboss.as.controller.OperationContext;
 import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.ReloadRequiredWriteAttributeHandler;
@@ -33,7 +33,11 @@ import org.jboss.dmr.ModelNode;
 
 public class CredentialReferenceWriteAttributeHandler extends ReloadRequiredWriteAttributeHandler {
 
-    public CredentialReferenceWriteAttributeHandler(ObjectTypeAttributeDefinition attribute) {
+    public CredentialReferenceWriteAttributeHandler(AttributeDefinition... attributes) {
+        super(attributes);
+    }
+
+    public CredentialReferenceWriteAttributeHandler(AttributeDefinition attribute) {
         super(attribute);
     }
 
