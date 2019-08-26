@@ -3558,5 +3558,4 @@ public interface ControllerLogger extends BasicLogger {
 
     @Message(id = 457, value = "Value for attribute '%s' is invalid.")
     OperationFailedException invalidAttributeValue(String attributeName);
-
 }

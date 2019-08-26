@@ -131,11 +131,6 @@ public final class CredentialReference {
                 .setXmlName(STORE)
                 .build();
 
-        clearTextAttribute = new SimpleAttributeDefinitionBuilder(CLEAR_TEXT, ModelType.STRING, true)
-                .setXmlName(CLEAR_TEXT)
-                .setAllowExpression(true)
-                .build();
-
         credentialAliasAttribute = new SimpleAttributeDefinitionBuilder(ALIAS, ModelType.STRING, true)
                 .setXmlName(ALIAS)
                 .setAllowExpression(true)
@@ -143,6 +138,11 @@ public final class CredentialReference {
                 .build();
         credentialTypeAttribute = new SimpleAttributeDefinitionBuilder(TYPE, ModelType.STRING, true)
                 .setXmlName(TYPE)
+                .setAllowExpression(true)
+                .build();
+
+        clearTextAttribute = new SimpleAttributeDefinitionBuilder(CLEAR_TEXT, ModelType.STRING, true)
+                .setXmlName(CLEAR_TEXT)
                 .setAllowExpression(true)
                 .build();
 
