@@ -68,9 +68,4 @@ public class ElytronSubsystemParser8_0 extends ElytronSubsystemParser7_0 {
         return domainParser;
     }
 
-    @Override
-    PersistentResourceXMLDescription getAuthenticationClientParser() {
-        return new AuthenticationClientParser().parser_8_0;
-    }
-
 }

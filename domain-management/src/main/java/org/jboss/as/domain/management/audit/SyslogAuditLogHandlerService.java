@@ -15,7 +15,6 @@
  */
 package org.jboss.as.domain.management.audit;
 
-import static org.jboss.as.controller.audit.SyslogAuditLogHandler.Transport.TLS;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.AUTHENTICATION;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.CLIENT_CERT_STORE;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.PROTOCOL;
@@ -100,7 +99,7 @@ public class SyslogAuditLogHandlerService implements Service, SyslogCredentialRe
         ExceptionSupplier<CredentialSource, Exception> tccskcsSupplier = null;
         ExceptionSupplier<CredentialSource, Exception> tccscsSupplier = null;
         ExceptionSupplier<CredentialSource, Exception> ttsSupplier = null;
-        if (transport == TLS) {
+        if (transport == SyslogAuditLogHandler.Transport.TLS) {
             final Set<ResourceEntry> tlsStores = protocol.getChildren(AUTHENTICATION);
             for (ResourceEntry storeEntry : tlsStores) {
                 final ModelNode storeModel = storeEntry.getModel();

@@ -749,14 +749,14 @@ public class SecurityRealmAddHandler extends AbstractAddStepHandler {
         ModelNode keystorePasswordNode = KeystoreAttributes.KEYSTORE_PASSWORD.resolveModelAttribute(context, ssl);
         char[] keystorePassword = keystorePasswordNode.isDefined() ? keystorePasswordNode.asString().toCharArray() : null;
         final String provider = KeystoreAttributes.KEYSTORE_PROVIDER.resolveModelAttribute(context, ssl).asString();
-        String keyStuffix = AUTHENTICATION + KEY_DELIMITER + TRUSTSTORE;
+        String keySuffix = AUTHENTICATION + KEY_DELIMITER + TRUSTSTORE;
 
         if (!JKS.equalsIgnoreCase(provider)) {
             serviceBuilder = serviceTarget.addService(serviceName);
             final Consumer<TrustManager[]> trustManagersConsumer = serviceBuilder.provides(serviceName);
             ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier = null;
             if (ssl.hasDefined(KeystoreAttributes.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_NAME)) {
-                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, KeystoreAttributes.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, ssl, serviceBuilder, keyStuffix);
+                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, KeystoreAttributes.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, ssl, serviceBuilder, keySuffix);
             }
             serviceBuilder.setInstance(new ProviderTrustManagerService(trustManagersConsumer, credentialSourceSupplier, provider, keystorePassword));
         } else {
@@ -773,7 +773,7 @@ public class SecurityRealmAddHandler extends AbstractAddStepHandler {
             }
             ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier = null;
             if (ssl.hasDefined(KeystoreAttributes.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_NAME)) {
-                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, KeystoreAttributes.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, ssl, serviceBuilder, keyStuffix);
+                credentialSourceSupplier = CredentialReference.getCredentialSourceSupplier(context, KeystoreAttributes.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, ssl, serviceBuilder, keySuffix);
             }
             serviceBuilder.setInstance(new FileTrustManagerService(trustManagersConsumer, pathManagerSupplier, credentialSourceSupplier, provider, path, relativeTo, keystorePassword));
         }

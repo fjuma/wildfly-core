@@ -31,6 +31,11 @@ import org.jboss.as.controller.ReloadRequiredWriteAttributeHandler;
 import org.jboss.as.controller.registry.Resource;
 import org.jboss.dmr.ModelNode;
 
+/**
+ * A write attribute handler that is capable of handling updates for credential reference attributes.
+ *
+ * @author <a href="mailto:fjuma@redhat.com">Farah Juma</a>
+ */
 public class CredentialReferenceWriteAttributeHandler extends ReloadRequiredWriteAttributeHandler {
 
     public CredentialReferenceWriteAttributeHandler(AttributeDefinition... attributes) {

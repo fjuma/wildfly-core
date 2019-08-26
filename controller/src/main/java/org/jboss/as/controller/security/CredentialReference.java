@@ -18,7 +18,6 @@
 package org.jboss.as.controller.security;
 
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.VALUE;
-import static org.jboss.as.controller.logging.ControllerLogger.ROOT_LOGGER;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -41,6 +40,7 @@ import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
 import org.jboss.as.controller.access.management.SensitiveTargetAccessConstraintDefinition;
 import org.jboss.as.controller.capability.RuntimeCapability;
+import org.jboss.as.controller.logging.ControllerLogger;
 import org.jboss.as.controller.transform.TransformationContext;
 import org.jboss.as.controller.transform.description.RejectAttributeChecker;
 import org.jboss.dmr.ModelNode;
@@ -130,7 +130,6 @@ public final class CredentialReference {
         credentialStoreAttribute = new SimpleAttributeDefinitionBuilder(STORE, ModelType.STRING, true)
                 .setXmlName(STORE)
                 .build();
-
         credentialAliasAttribute = new SimpleAttributeDefinitionBuilder(ALIAS, ModelType.STRING, true)
                 .setXmlName(ALIAS)
                 .setAllowExpression(true)
@@ -140,12 +139,10 @@ public final class CredentialReference {
                 .setXmlName(TYPE)
                 .setAllowExpression(true)
                 .build();
-
         clearTextAttribute = new SimpleAttributeDefinitionBuilder(CLEAR_TEXT, ModelType.STRING, true)
                 .setXmlName(CLEAR_TEXT)
                 .setAllowExpression(true)
                 .build();
-
         credentialReferenceAD = getAttributeBuilder(CREDENTIAL_REFERENCE, CREDENTIAL_REFERENCE, false, false)
                 .setRestartAllServices()
                 .build();
@@ -157,7 +154,6 @@ public final class CredentialReference {
         credentialReferenceADWithCapabilityReference = getAttributeBuilder(CREDENTIAL_REFERENCE, CREDENTIAL_REFERENCE, false, true)
                 .setRestartAllServices()
                 .build();
-
     }
 
     private CredentialReference() {
@@ -330,8 +326,7 @@ public final class CredentialReference {
      * @return ExceptionSupplier of CredentialSource
      * @throws OperationFailedException wrapping exception when something goes wrong
      */
-    public static ExceptionSupplier<CredentialSource, Exception> getCredentialSourceSupplier(OperationContext context, ObjectTypeAttributeDefinition credentialReferenceAttributeDefinition, ModelNode model, ServiceBuilder<?> serviceBuilder, String keySuffix
-    ) throws OperationFailedException {
+    public static ExceptionSupplier<CredentialSource, Exception> getCredentialSourceSupplier(OperationContext context, ObjectTypeAttributeDefinition credentialReferenceAttributeDefinition, ModelNode model, ServiceBuilder<?> serviceBuilder, String keySuffix) throws OperationFailedException {
         ModelNode value = credentialReferenceAttributeDefinition.resolveModelAttribute(context, model);
 
         if (serviceBuilder == null) {
@@ -342,19 +337,22 @@ public final class CredentialReference {
         final String credentialAlias;
         final String credentialType;
         final String secret;
-        //final String parent = context.getCurrentAddress().toPathStyleString();//context.getCurrentAddress().getLastElement().getValue();
         final String key = getAttachmentMapKey(context, keySuffix, credentialReferenceAttributeDefinition.getName());
 
         if (value.isDefined()) {
             credentialStoreName = credentialReferencePartAsStringIfDefined(value, CredentialReference.STORE);
             credentialAlias = credentialReferencePartAsStringIfDefined(value, CredentialReference.ALIAS);
             credentialType = credentialReferencePartAsStringIfDefined(value, CredentialReference.TYPE);
-            Map<String, String> actualClearTextValues = context.getAttachment(ACTUAL_CLEAR_TEXT_VALUES);
-            //secret = actualClearTextValues == null ? null : actualClearTextValues.get(getAttachmentMapKey(context, keySuffix, credentialReferenceAttributeDefinition.getName()));
             if (value.hasDefined(CredentialReference.CLEAR_TEXT)) {
                 secret = value.get(CredentialReference.CLEAR_TEXT).asString();
             } else {
-                secret = actualClearTextValues == null ? null : actualClearTextValues.get(getAttachmentMapKey(context, keySuffix, credentialReferenceAttributeDefinition.getName()));
+                Map<String, String> actualClearTextValues = context.getAttachment(ACTUAL_CLEAR_TEXT_VALUES);
+                if (actualClearTextValues == null) {
+                    secret = null;
+                } else {
+                    secret = actualClearTextValues.get(key);
+                    actualClearTextValues.remove(key);
+                }
             }
         } else {
             credentialStoreName = null;
@@ -460,14 +458,14 @@ public final class CredentialReference {
                         public <C extends Credential> C getCredential(Class<C> credentialType, String algorithmName, AlgorithmParameterSpec parameterSpec) throws IOException {
                             String[] part = secret.substring(5).split(";");  // strip "MASK-" and split by ';'
                             if (part.length != 3) {
-                                throw ROOT_LOGGER.wrongMaskedPasswordFormat();
+                                throw ControllerLogger.ROOT_LOGGER.wrongMaskedPasswordFormat();
                             }
                             String salt = part[1];
                             final int iterationCount;
                             try {
                                 iterationCount = Integer.parseInt(part[2]);
                             } catch (NumberFormatException e) {
-                                throw ROOT_LOGGER.wrongMaskedPasswordFormat();
+                                throw ControllerLogger.ROOT_LOGGER.wrongMaskedPasswordFormat();
                             }
                             try {
                                 PasswordBasedEncryptionUtil decryptUtil = new PasswordBasedEncryptionUtil.Builder()
@@ -619,10 +617,6 @@ public final class CredentialReference {
         return getAttachmentMapKey(context, null, credentialReferenceAttributeName);
     }
 
-    //private static String getAttachmentMapKey(String parent, String credentialReferenceAttributeName) {
-    //    return parent + "." + credentialReferenceAttributeName;
-    //}
-
     private static String getAttachmentMapKey(OperationContext context, String keySuffix, String credentialReferenceAttributeName) {
         StringBuilder sb = new StringBuilder();
         sb.append(context.getCurrentAddress().toPathStyleString().replaceFirst("/", "").replace("/", KEY_DELIMITER));
@@ -637,7 +631,7 @@ public final class CredentialReference {
 
         @Override
         public String getRejectionLogMessage(Map<String, ModelNode> attributes) {
-            return ROOT_LOGGER.invalidAttributeValue(CLEAR_TEXT).getMessage();
+            return ControllerLogger.ROOT_LOGGER.invalidAttributeValue(CLEAR_TEXT).getMessage();
         }
 
         @Override

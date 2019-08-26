@@ -57,7 +57,6 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
      * Service Lifecycle Related Methods
      */
 
-
     @Override
     public void start(StartContext startContext) throws StartException {
         if (alias != null && secret != null) {

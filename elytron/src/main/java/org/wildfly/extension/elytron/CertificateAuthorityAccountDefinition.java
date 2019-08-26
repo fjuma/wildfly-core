@@ -113,7 +113,7 @@ class CertificateAuthorityAccountDefinition extends SimpleResourceDefinition {
             .setAttributeGroup(ElytronDescriptionConstants.ACCOUNT_KEY)
             .build();
 
-    private static final AttributeDefinition[] ATTRIBUTES = new AttributeDefinition[] { CERTIFICATE_AUTHORITY, CONTACT_URLS, KEY_STORE, ALIAS, CREDENTIAL_REFERENCE};
+    private static final AttributeDefinition[] ATTRIBUTES = new AttributeDefinition[] { CERTIFICATE_AUTHORITY, CONTACT_URLS, KEY_STORE, ALIAS, CREDENTIAL_REFERENCE };
 
     static final SimpleAttributeDefinition AGREE_TO_TERMS_OF_SERVICE = new SimpleAttributeDefinitionBuilder(ElytronDescriptionConstants.AGREE_TO_TERMS_OF_SERVICE, ModelType.BOOLEAN, false)
             .setAllowExpression(true)
