@@ -18,6 +18,7 @@
 
 package org.wildfly.extension.elytron;
 
+import static org.jboss.as.controller.security.CredentialReference.handleCredentialReferenceUpdate;
 import static org.wildfly.extension.elytron.Capabilities.CREDENTIAL_STORE_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.CREDENTIAL_STORE_RUNTIME_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.PROVIDERS_CAPABILITY;
@@ -271,6 +272,12 @@ final class CredentialStoreResourceDefinition extends SimpleResourceDefinition {
 
         private CredentialStoreAddHandler() {
             super(CREDENTIAL_STORE_RUNTIME_CAPABILITY, CONFIG_ATTRIBUTES);
+        }
+
+        @Override
+        protected void populateModel(final OperationContext context, final ModelNode operation, final Resource resource) throws  OperationFailedException {
+            super.populateModel(context, operation, resource);
+            handleCredentialReferenceUpdate(context, resource.getModel());
         }
 
         @Override
