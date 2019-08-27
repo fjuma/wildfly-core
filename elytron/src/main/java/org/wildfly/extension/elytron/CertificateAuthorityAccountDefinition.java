@@ -18,6 +18,7 @@
 
 package org.wildfly.extension.elytron;
 
+import static org.jboss.as.controller.security.CredentialReference.handleCredentialReferenceUpdate;
 import static org.wildfly.extension.elytron.AdvancedModifiableKeyStoreDecorator.resetAcmeAccount;
 import static org.wildfly.extension.elytron.Capabilities.CERTIFICATE_AUTHORITY_ACCOUNT_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.CERTIFICATE_AUTHORITY_ACCOUNT_RUNTIME_CAPABILITY;
@@ -168,6 +169,12 @@ class CertificateAuthorityAccountDefinition extends SimpleResourceDefinition {
 
         private CertificateAuthorityAccountAddHandler() {
             super(CERTIFICATE_AUTHORITY_ACCOUNT_RUNTIME_CAPABILITY, ATTRIBUTES);
+        }
+
+        @Override
+        protected void populateModel(final OperationContext context, final ModelNode operation, final Resource resource) throws  OperationFailedException {
+            super.populateModel(context, operation, resource);
+            handleCredentialReferenceUpdate(context, resource.getModel());
         }
 
         @Override
