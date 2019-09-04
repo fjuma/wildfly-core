@@ -20,6 +20,7 @@ package org.wildfly.extension.elytron;
 
 import static org.jboss.as.controller.capability.RuntimeCapability.buildDynamicCapabilityName;
 import static org.jboss.as.controller.security.CredentialReference.handleCredentialReferenceUpdate;
+import static org.jboss.as.controller.security.CredentialReference.rollbackCredentialStoreUpdate;
 import static org.wildfly.extension.elytron.Capabilities.KEY_MANAGER_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.KEY_MANAGER_RUNTIME_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.KEY_STORE_CAPABILITY;
@@ -567,6 +568,11 @@ class SSLDefinitions {
                     }
                     throw ROOT_LOGGER.noTypeFound(X509ExtendedKeyManager.class.getSimpleName());
                 };
+            }
+
+            @Override
+            protected void rollbackRuntime(OperationContext context, final ModelNode operation, final Resource resource) {
+                rollbackCredentialStoreUpdate(credentialReferenceDefinition, context, resource);
             }
         };
 

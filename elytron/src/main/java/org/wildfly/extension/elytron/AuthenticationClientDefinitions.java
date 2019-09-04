@@ -19,6 +19,7 @@
 package org.wildfly.extension.elytron;
 
 import static org.jboss.as.controller.security.CredentialReference.handleCredentialReferenceUpdate;
+import static org.jboss.as.controller.security.CredentialReference.rollbackCredentialStoreUpdate;
 import static org.wildfly.common.Assert.checkNotNullParam;
 import static org.wildfly.extension.elytron.Capabilities.AUTHENTICATION_CONFIGURATION_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.AUTHENTICATION_CONFIGURATION_RUNTIME_CAPABILITY;
@@ -369,6 +370,11 @@ class AuthenticationClientDefinitions {
                         throw ROOT_LOGGER.unableToStartService(e);
                     }
                 };
+            }
+
+            @Override
+            protected void rollbackRuntime(OperationContext context, final ModelNode operation, final Resource resource) {
+                rollbackCredentialStoreUpdate(CREDENTIAL_REFERENCE, context, resource);
             }
 
             private InjectedValue<SecurityDomain> getSecurityDomain(ServiceBuilder<AuthenticationConfiguration> serviceBuilder, OperationContext context, String securityDomain) {

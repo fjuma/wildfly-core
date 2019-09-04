@@ -19,6 +19,7 @@
 package org.wildfly.extension.elytron;
 
 import static org.jboss.as.controller.security.CredentialReference.handleCredentialReferenceUpdate;
+import static org.jboss.as.controller.security.CredentialReference.rollbackCredentialStoreUpdate;
 import static org.wildfly.extension.elytron.AdvancedModifiableKeyStoreDecorator.resetAcmeAccount;
 import static org.wildfly.extension.elytron.Capabilities.CERTIFICATE_AUTHORITY_ACCOUNT_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.CERTIFICATE_AUTHORITY_ACCOUNT_RUNTIME_CAPABILITY;
@@ -208,6 +209,11 @@ class CertificateAuthorityAccountDefinition extends SimpleResourceDefinition {
                 acmeAccountServiceBuilder.requires(CERTIFICATE_AUTHORITY_RUNTIME_CAPABILITY.getCapabilityServiceName(certificateAuthorityName));
                 commonRequirements(acmeAccountServiceBuilder).install();
             }
+        }
+
+        @Override
+        protected void rollbackRuntime(OperationContext context, final ModelNode operation, final Resource resource) {
+            rollbackCredentialStoreUpdate(CREDENTIAL_REFERENCE, context, resource);
         }
     }
 

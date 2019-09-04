@@ -24,6 +24,7 @@ package org.jboss.as.domain.management.security;
 
 import static org.jboss.as.controller.security.CredentialReference.applyCredentialReferenceUpdateToRuntime;
 import static org.jboss.as.controller.security.CredentialReference.handleCredentialReferenceUpdate;
+import static org.jboss.as.controller.security.CredentialReference.rollbackCredentialStoreUpdate;
 import static org.jboss.as.domain.management.ModelDescriptionConstants.SECURITY_REALM;
 
 import org.jboss.as.controller.AttributeDefinition;
@@ -77,9 +78,19 @@ public class SecurityRealmChildWriteAttributeHandler extends RestartParentWriteA
         if (attributeName.equals(CredentialReference.CREDENTIAL_REFERENCE) ||
                 attributeName.equals(KeystoreAttributes.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_NAME) ||
                 attributeName.equals(KeystoreAttributes.KEY_PASSWORD_CREDENTIAL_REFERENCE_NAME)) {
-            requiresReload = applyCredentialReferenceUpdateToRuntime(context, operation, resolvedValue, currentValue);
+            requiresReload = applyCredentialReferenceUpdateToRuntime(context, operation, resolvedValue, currentValue, attributeName);
         }
         return super.applyUpdateToRuntime(context, operation, attributeName, resolvedValue, currentValue, handbackHolder) || requiresReload;
+    }
+
+    @Override
+    protected void revertUpdateToRuntime(OperationContext context, ModelNode operation, String attributeName, ModelNode valueToRestore, ModelNode resolvedValue, ModelNode invalidatedParentModel) throws OperationFailedException {
+        if (attributeName.equals(CredentialReference.CREDENTIAL_REFERENCE) ||
+                attributeName.equals(KeystoreAttributes.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_NAME) ||
+                attributeName.equals(KeystoreAttributes.KEY_PASSWORD_CREDENTIAL_REFERENCE_NAME)) {
+            rollbackCredentialStoreUpdate(getAttributeDefinition(attributeName), context, resolvedValue);
+        }
+        super.revertUpdateToRuntime(context, operation, attributeName, valueToRestore, resolvedValue, invalidatedParentModel);
     }
 
     @Override

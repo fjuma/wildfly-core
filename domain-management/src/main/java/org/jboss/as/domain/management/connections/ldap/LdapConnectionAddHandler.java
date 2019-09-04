@@ -24,6 +24,7 @@ package org.jboss.as.domain.management.connections.ldap;
 
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OP_ADDR;
 import static org.jboss.as.controller.security.CredentialReference.handleCredentialReferenceUpdate;
+import static org.jboss.as.controller.security.CredentialReference.rollbackCredentialStoreUpdate;
 import static org.jboss.as.domain.management.connections.ldap.LdapConnectionResourceDefinition.ALWAYS_SEND_CLIENT_CERT;
 import static org.jboss.as.domain.management.connections.ldap.LdapConnectionResourceDefinition.HANDLES_REFERRALS_FOR;
 import static org.jboss.as.domain.management.connections.ldap.LdapConnectionResourceDefinition.INITIAL_CONTEXT_FACTORY;
@@ -121,6 +122,11 @@ public class LdapConnectionAddHandler extends AbstractAddStepHandler {
         updateRuntime(context, model, connectionManagerService);
         sb.setInstance(connectionManagerService);
         sb.install();
+    }
+
+    @Override
+    protected void rollbackRuntime(OperationContext context, final ModelNode operation, final Resource resource) {
+        rollbackCredentialStoreUpdate(LdapConnectionResourceDefinition.SEARCH_CREDENTIAL_REFERENCE, context, resource);
     }
 
 

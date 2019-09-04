@@ -23,6 +23,7 @@ package org.jboss.as.controller.security;
 
 import static org.jboss.as.controller.security.CredentialReference.applyCredentialReferenceUpdateToRuntime;
 import static org.jboss.as.controller.security.CredentialReference.handleCredentialReferenceUpdate;
+import static org.jboss.as.controller.security.CredentialReference.rollbackCredentialStoreUpdate;
 
 import org.jboss.as.controller.AttributeDefinition;
 import org.jboss.as.controller.OperationContext;
@@ -58,7 +59,12 @@ public class CredentialReferenceWriteAttributeHandler extends ReloadRequiredWrit
     @Override
     protected boolean applyUpdateToRuntime(OperationContext context, ModelNode operation, String attributeName, ModelNode resolvedValue,
                                            ModelNode currentValue, HandbackHolder<Void> handbackHolder) throws OperationFailedException {
-        return applyCredentialReferenceUpdateToRuntime(context, operation, resolvedValue, currentValue);
+        return applyCredentialReferenceUpdateToRuntime(context, operation, resolvedValue, currentValue, attributeName);
+    }
+
+    @Override
+    protected void revertUpdateToRuntime(OperationContext context, ModelNode operation, String attributeName, ModelNode valueToRestore, ModelNode resolvedValue, Void handback) throws OperationFailedException {
+        rollbackCredentialStoreUpdate(getAttributeDefinition(attributeName), context, resolvedValue);
     }
 
 }

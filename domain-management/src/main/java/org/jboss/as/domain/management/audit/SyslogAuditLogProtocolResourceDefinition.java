@@ -28,6 +28,7 @@ import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.PRO
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.SYSLOG_HANDLER;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.TRUSTSTORE;
 import static org.jboss.as.controller.security.CredentialReference.handleCredentialReferenceUpdate;
+import static org.jboss.as.controller.security.CredentialReference.rollbackCredentialStoreUpdate;
 import static org.jboss.as.domain.management.security.KeystoreAttributes.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE_NAME;
 import static org.jboss.as.domain.management.security.KeystoreAttributes.KEY_PASSWORD_CREDENTIAL_REFERENCE_NAME;
 
@@ -421,6 +422,8 @@ public abstract class SyslogAuditLogProtocolResourceDefinition extends SimpleRes
 
         @Override
         protected void rollbackRuntime(OperationContext context, ModelNode operation, Resource resource) {
+            rollbackCredentialStoreUpdate(TlsKeyStore.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, context, resource);
+            rollbackCredentialStoreUpdate(TlsKeyStore.KEY_PASSWORD_CREDENTIAL_REFERENCE, context, resource);
             auditLogger.getUpdater().rollbackChanges();
         }
 

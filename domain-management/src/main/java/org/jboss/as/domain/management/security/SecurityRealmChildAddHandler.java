@@ -23,6 +23,8 @@
 package org.jboss.as.domain.management.security;
 
 import static org.jboss.as.controller.security.CredentialReference.handleCredentialReferenceUpdate;
+import static org.jboss.as.controller.security.CredentialReference.rollbackCredentialStoreUpdate;
+import static org.jboss.as.domain.management.security.SecretServerIdentityResourceDefinition.CREDENTIAL_REFERENCE;
 
 import java.util.Collections;
 import java.util.Set;
@@ -89,6 +91,13 @@ public class SecurityRealmChildAddHandler extends SecurityRealmParentRestartHand
             }
         } // else we know the SecurityRealmAddHandler is part of this overall set of ops and it added the handlers.
         recordCapabilitiesAndRequirements(context, operation, resource);
+    }
+
+    @Override
+    protected void rollbackRuntime(OperationContext context, final ModelNode operation, final Resource resource) {
+        rollbackCredentialStoreUpdate(CREDENTIAL_REFERENCE, context, resource);
+        rollbackCredentialStoreUpdate(KeystoreAttributes.KEYSTORE_PASSWORD_CREDENTIAL_REFERENCE, context, resource);
+        rollbackCredentialStoreUpdate(KeystoreAttributes.KEY_PASSWORD_CREDENTIAL_REFERENCE, context, resource);
     }
 
     protected void recordCapabilitiesAndRequirements(OperationContext context, ModelNode operation, Resource resource) throws OperationFailedException {

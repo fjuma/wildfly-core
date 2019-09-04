@@ -44,6 +44,7 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
     private String alias;
     private String secret;
     private ModelNode result;
+    private CredentialStoreUpdateInfo credentialStoreUpdateInfo;
 
     private final InjectedValue<CredentialStore> injectedCredentialStore = new InjectedValue<>();
 
@@ -51,6 +52,14 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
         this.alias = alias;
         this.secret = secret;
         this.result = result;
+        this.credentialStoreUpdateInfo = null;
+    }
+
+    CredentialStoreUpdateService(String alias, String secret, ModelNode result, CredentialStoreUpdateInfo credentialStoreUpdateInfo) {
+        this.alias = alias;
+        this.secret = secret;
+        this.result = result;
+        this.credentialStoreUpdateInfo = credentialStoreUpdateInfo;
     }
 
     /*
@@ -61,7 +70,7 @@ public class CredentialStoreUpdateService implements Service<CredentialStoreUpda
     public void start(StartContext startContext) throws StartException {
         if (alias != null && secret != null) {
             try {
-                updateCredentialStore(injectedCredentialStore.getValue(), alias, secret, result);
+                updateCredentialStore(injectedCredentialStore.getValue(), alias, secret, result, credentialStoreUpdateInfo);
             } catch (CredentialStoreException e) {
                 throw new StartException(e);
             }

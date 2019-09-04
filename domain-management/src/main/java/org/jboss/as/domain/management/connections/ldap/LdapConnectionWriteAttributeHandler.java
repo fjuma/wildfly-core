@@ -25,6 +25,7 @@ package org.jboss.as.domain.management.connections.ldap;
 import static org.jboss.as.controller.descriptions.ModelDescriptionConstants.OP_ADDR;
 import static org.jboss.as.controller.security.CredentialReference.applyCredentialReferenceUpdateToRuntime;
 import static org.jboss.as.controller.security.CredentialReference.handleCredentialReferenceUpdate;
+import static org.jboss.as.controller.security.CredentialReference.rollbackCredentialStoreUpdate;
 import static org.jboss.as.domain.management.connections.ldap.LdapConnectionResourceDefinition.SEARCH_CREDENTIAL_REFERENCE;
 
 import org.jboss.as.controller.AbstractWriteAttributeHandler;
@@ -78,7 +79,7 @@ public class LdapConnectionWriteAttributeHandler extends AbstractWriteAttributeH
         boolean requiresReload = false;
         final ModelNode model = context.readResource(PathAddress.EMPTY_ADDRESS).getModel();
         if (attributeName.equals(SEARCH_CREDENTIAL_REFERENCE.getName())) {
-            requiresReload = applyCredentialReferenceUpdateToRuntime(context, operation, resolvedValue, currentValue);
+            requiresReload = applyCredentialReferenceUpdateToRuntime(context, operation, resolvedValue, currentValue, attributeName);
         }
         handbackHolder.setHandback(updateLdapConnectionService(context, operation, model));
 
@@ -89,6 +90,9 @@ public class LdapConnectionWriteAttributeHandler extends AbstractWriteAttributeH
     protected void revertUpdateToRuntime(final OperationContext context, final ModelNode operation, final String attributeName,
                                          final ModelNode valueToRestore, final ModelNode valueToRevert,
                                          final Config handback) throws OperationFailedException {
+        if (attributeName.equals(SEARCH_CREDENTIAL_REFERENCE.getName())) {
+            rollbackCredentialStoreUpdate(SEARCH_CREDENTIAL_REFERENCE, context, valueToRevert);
+        }
         updateLdapConnectionService(context, operation, handback);
     }
 

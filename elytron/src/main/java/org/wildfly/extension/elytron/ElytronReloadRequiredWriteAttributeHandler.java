@@ -25,6 +25,7 @@ package org.wildfly.extension.elytron;
 
 import static org.jboss.as.controller.security.CredentialReference.applyCredentialReferenceUpdateToRuntime;
 import static org.jboss.as.controller.security.CredentialReference.handleCredentialReferenceUpdate;
+import static org.jboss.as.controller.security.CredentialReference.rollbackCredentialStoreUpdate;
 
 import java.util.Collection;
 
@@ -62,7 +63,8 @@ class ElytronReloadRequiredWriteAttributeHandler extends ReloadRequiredWriteAttr
                                            ModelNode currentValue, HandbackHolder<Void> handbackHolder) throws OperationFailedException {
         boolean requiresReload = false;
         if (attributeName.equals(CredentialReference.CREDENTIAL_REFERENCE)) {
-            requiresReload = applyCredentialReferenceUpdateToRuntime(context, operation, resolvedValue, currentValue);
+            requiresReload = applyCredentialReferenceUpdateToRuntime(context, operation, resolvedValue, currentValue, attributeName);
+
         }
         return super.applyUpdateToRuntime(context, operation, attributeName, resolvedValue, currentValue, handbackHolder) || requiresReload;
     }
@@ -70,5 +72,12 @@ class ElytronReloadRequiredWriteAttributeHandler extends ReloadRequiredWriteAttr
     @Override
     protected boolean requiresRuntime(final OperationContext context) {
         return isServerOrHostController(context);
+    }
+
+    @Override
+    protected void revertUpdateToRuntime(OperationContext context, ModelNode operation, String attributeName, ModelNode valueToRestore, ModelNode resolvedValue, Void handback) throws OperationFailedException {
+        if (attributeName.equals(CredentialReference.CREDENTIAL_REFERENCE)) {
+            rollbackCredentialStoreUpdate(getAttributeDefinition(attributeName), context, resolvedValue);
+        }
     }
 }
