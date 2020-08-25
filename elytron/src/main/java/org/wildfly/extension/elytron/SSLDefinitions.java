@@ -36,6 +36,7 @@ import static org.wildfly.extension.elytron.ElytronExtension.getRequiredService;
 import static org.wildfly.extension.elytron.FileAttributeDefinitions.PATH;
 import static org.wildfly.extension.elytron.FileAttributeDefinitions.RELATIVE_TO;
 import static org.wildfly.extension.elytron.FileAttributeDefinitions.pathName;
+import static org.wildfly.extension.elytron.ModifiableKeyStoreDecorator.getModifiableKeyStoreService;
 import static org.wildfly.extension.elytron._private.ElytronSubsystemMessages.ROOT_LOGGER;
 
 import java.io.File;
@@ -77,6 +78,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509ExtendedTrustManager;
+import javax.security.auth.x500.X500Principal;
 
 import org.jboss.as.controller.AbstractAddStepHandler;
 import org.jboss.as.controller.AttributeDefinition;
@@ -134,6 +136,7 @@ import org.wildfly.security.ssl.SNIContextMatcher;
 import org.wildfly.security.ssl.SNISSLContext;
 import org.wildfly.security.ssl.SSLContextBuilder;
 import org.wildfly.security.ssl.X509RevocationTrustManager;
+import org.wildfly.security.x500.cert.SelfSignedX509CertificateAndSigningKey;
 
 /**
  * Definitions for resources used to configure SSLContexts.
@@ -533,7 +536,14 @@ class SSLDefinitions {
                 ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier =
                         CredentialReference.getCredentialSourceSupplier(context, credentialReferenceDefinition, model, serviceBuilder);
 
-                DelegatingKeyManager delegatingKeyManager = new DelegatingKeyManager();
+                boolean blah = true;
+                DelegatingKeyManager delegatingKeyManager;
+                ModifiableKeyStoreService keyStoreService = getModifiableKeyStoreService(context);
+                if (blah) {
+                    delegatingKeyManager = new SelfSignedCertificateDelegatingKeyManager(keyStoreInjector, credentialSourceSupplier, keyStoreService);
+                } else {
+                    delegatingKeyManager = new DelegatingKeyManager();
+                }
                 return () -> {
                     Provider[] providers = providersInjector.getOptionalValue();
                     KeyManagerFactory keyManagerFactory = null;
@@ -966,6 +976,53 @@ class SSLDefinitions {
                 }
             }
         };
+    }
+
+    private static class SelfSignedCertificateDelegatingKeyManager extends DelegatingKeyManager {
+
+        private final AtomicReference<X509ExtendedKeyManager> delegating = new AtomicReference<>();
+        private final InjectedValue<KeyStore> keyStoreInjector;
+        private final ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier;
+        private final ModifiableKeyStoreService keyStoreService;
+
+        SelfSignedCertificateDelegatingKeyManager(InjectedValue<KeyStore> keyStoreInjector, ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier,
+                                                  ModifiableKeyStoreService keyStoreService) {
+            this.keyStoreInjector = keyStoreInjector;
+            this.credentialSourceSupplier = credentialSourceSupplier;
+            this.keyStoreService = keyStoreService;
+        }
+
+        private void setKeyManager(X509ExtendedKeyManager keyManager) {
+            delegating.set(keyManager);
+        }
+
+        @Override
+        public String chooseEngineServerAlias(String keyType, Principal[] issuers, SSLEngine engine) {
+            try {
+                KeyStore keyStore = keyStoreInjector.getOptionalValue();
+                CredentialSource cs = credentialSourceSupplier.get();
+                char[] password;
+                if (cs != null) {
+                    password = cs.getCredential(PasswordCredential.class).getPassword(ClearPassword.class).getPassword();
+                }
+                if (keyStore.size() == 0) {
+                    SelfSignedX509CertificateAndSigningKey selfSignedX509CertificateAndSigningKey = SelfSignedX509CertificateAndSigningKey.builder().setDn(new X500Principal("localhost")).build();
+                    keyStore.setKeyEntry("server", selfSignedX509CertificateAndSigningKey.getSigningKey(), "password".toCharArray(), new X509Certificate[]{selfSignedX509CertificateAndSigningKey.getSelfSignedCertificate()});
+                    ((KeyStoreService) keyStoreService).save();
+                    KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()); // wrong, need providers, alg, etc.
+                    keyManagerFactory.init(keyStore, "password".toCharArray());
+                    KeyManager[] keyManagers = keyManagerFactory.getKeyManagers();
+                    for (KeyManager keyManager : keyManagers) {
+                        if (keyManager instanceof X509ExtendedKeyManager) {
+                            setKeyManager((X509ExtendedKeyManager) keyManager);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                //
+            }
+            return delegating.get().chooseEngineServerAlias(keyType, issuers, engine);
+        }
     }
 
     private static class DelegatingKeyManager extends X509ExtendedKeyManager {
