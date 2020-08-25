@@ -24,6 +24,7 @@ import static org.jboss.as.controller.security.CredentialReference.rollbackCrede
 import static org.wildfly.extension.elytron.Capabilities.KEY_MANAGER_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.KEY_MANAGER_RUNTIME_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.KEY_STORE_CAPABILITY;
+import static org.wildfly.extension.elytron.Capabilities.KEY_STORE_RUNTIME_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.PRINCIPAL_TRANSFORMER_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.PROVIDERS_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.REALM_MAPPER_CAPABILITY;
@@ -36,7 +37,6 @@ import static org.wildfly.extension.elytron.ElytronExtension.getRequiredService;
 import static org.wildfly.extension.elytron.FileAttributeDefinitions.PATH;
 import static org.wildfly.extension.elytron.FileAttributeDefinitions.RELATIVE_TO;
 import static org.wildfly.extension.elytron.FileAttributeDefinitions.pathName;
-import static org.wildfly.extension.elytron.ModifiableKeyStoreDecorator.getModifiableKeyStoreService;
 import static org.wildfly.extension.elytron._private.ElytronSubsystemMessages.ROOT_LOGGER;
 
 import java.io.File;
@@ -66,6 +66,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -95,6 +96,7 @@ import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
 import org.jboss.as.controller.SimpleMapAttributeDefinition;
 import org.jboss.as.controller.SimpleOperationDefinitionBuilder;
 import org.jboss.as.controller.StringListAttributeDefinition;
+import org.jboss.as.controller.capability.RuntimeCapability;
 import org.jboss.as.controller.descriptions.ResourceDescriptionResolver;
 import org.jboss.as.controller.descriptions.StandardResourceDescriptionResolver;
 import org.jboss.as.controller.logging.ControllerLogger;
@@ -113,6 +115,7 @@ import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceController.State;
 import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.value.InjectedValue;
 import org.wildfly.common.function.ExceptionSupplier;
@@ -538,9 +541,15 @@ class SSLDefinitions {
 
                 boolean blah = true;
                 DelegatingKeyManager delegatingKeyManager;
-                ModifiableKeyStoreService keyStoreService = getModifiableKeyStoreService(context);
+                Supplier<ModifiableKeyStoreService> keyStoreServiceSupplier = () -> {
+                    try {
+                        return getModifiableKeyStoreService(context, keyStoreName);
+                    } catch (Exception e) {
+                        return null;
+                    }
+                };
                 if (blah) {
-                    delegatingKeyManager = new SelfSignedCertificateDelegatingKeyManager(keyStoreInjector, credentialSourceSupplier, keyStoreService);
+                    delegatingKeyManager = new SelfSignedCertificateDelegatingKeyManager(keyStoreInjector, credentialSourceSupplier, keyStoreServiceSupplier);
                 } else {
                     delegatingKeyManager = new DelegatingKeyManager();
                 }
@@ -983,13 +992,13 @@ class SSLDefinitions {
         private final AtomicReference<X509ExtendedKeyManager> delegating = new AtomicReference<>();
         private final InjectedValue<KeyStore> keyStoreInjector;
         private final ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier;
-        private final ModifiableKeyStoreService keyStoreService;
+        private final Supplier<ModifiableKeyStoreService> keyStoreServiceSupplier;
 
         SelfSignedCertificateDelegatingKeyManager(InjectedValue<KeyStore> keyStoreInjector, ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier,
-                                                  ModifiableKeyStoreService keyStoreService) {
+                                                  Supplier<ModifiableKeyStoreService> keyStoreServiceSupplier) {
             this.keyStoreInjector = keyStoreInjector;
             this.credentialSourceSupplier = credentialSourceSupplier;
-            this.keyStoreService = keyStoreService;
+            this.keyStoreServiceSupplier = keyStoreServiceSupplier;
         }
 
         private void setKeyManager(X509ExtendedKeyManager keyManager) {
@@ -1001,12 +1010,13 @@ class SSLDefinitions {
             try {
                 KeyStore keyStore = keyStoreInjector.getOptionalValue();
                 CredentialSource cs = credentialSourceSupplier.get();
+                ModifiableKeyStoreService keyStoreService = keyStoreServiceSupplier.get();
                 char[] password;
                 if (cs != null) {
                     password = cs.getCredential(PasswordCredential.class).getPassword(ClearPassword.class).getPassword();
                 }
                 if (keyStore.size() == 0) {
-                    SelfSignedX509CertificateAndSigningKey selfSignedX509CertificateAndSigningKey = SelfSignedX509CertificateAndSigningKey.builder().setDn(new X500Principal("localhost")).build();
+                    SelfSignedX509CertificateAndSigningKey selfSignedX509CertificateAndSigningKey = SelfSignedX509CertificateAndSigningKey.builder().setDn(new X500Principal("CN=localhost")).build();
                     keyStore.setKeyEntry("server", selfSignedX509CertificateAndSigningKey.getSigningKey(), "password".toCharArray(), new X509Certificate[]{selfSignedX509CertificateAndSigningKey.getSelfSignedCertificate()});
                     ((KeyStoreService) keyStoreService).save();
                     KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()); // wrong, need providers, alg, etc.
@@ -1506,6 +1516,24 @@ class SSLDefinitions {
         }
 
         return Boolean.FALSE::booleanValue;
+    }
+
+    static ModifiableKeyStoreService getModifiableKeyStoreService(OperationContext context, String keyStoreName) throws OperationFailedException {
+        ServiceRegistry serviceRegistry = context.getServiceRegistry(true);
+        return getModifiableKeyStoreService(serviceRegistry, keyStoreName);
+    }
+
+    static ModifiableKeyStoreService getModifiableKeyStoreService(ServiceRegistry serviceRegistry, String keyStoreName) throws OperationFailedException {
+        RuntimeCapability<Void> runtimeCapability = KEY_STORE_RUNTIME_CAPABILITY.fromBaseCapability(keyStoreName);
+        ServiceName serviceName = runtimeCapability.getCapabilityServiceName();
+
+        ServiceController<KeyStore> serviceContainer = getRequiredService(serviceRegistry, serviceName, KeyStore.class);
+        ServiceController.State serviceState = serviceContainer.getState();
+        if (serviceState != ServiceController.State.UP) {
+            throw ROOT_LOGGER.requiredServiceNotUp(serviceName, serviceState);
+        }
+
+        return (ModifiableKeyStoreService) serviceContainer.getService();
     }
 
 }
