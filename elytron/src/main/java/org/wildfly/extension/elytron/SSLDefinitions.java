@@ -24,6 +24,7 @@ import static org.jboss.as.controller.security.CredentialReference.rollbackCrede
 import static org.wildfly.extension.elytron.Capabilities.KEY_MANAGER_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.KEY_MANAGER_RUNTIME_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.KEY_STORE_CAPABILITY;
+import static org.wildfly.extension.elytron.Capabilities.KEY_STORE_RUNTIME_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.PRINCIPAL_TRANSFORMER_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.PROVIDERS_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.REALM_MAPPER_CAPABILITY;
@@ -93,6 +94,7 @@ import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
 import org.jboss.as.controller.SimpleMapAttributeDefinition;
 import org.jboss.as.controller.SimpleOperationDefinitionBuilder;
 import org.jboss.as.controller.StringListAttributeDefinition;
+import org.jboss.as.controller.capability.RuntimeCapability;
 import org.jboss.as.controller.descriptions.ResourceDescriptionResolver;
 import org.jboss.as.controller.descriptions.StandardResourceDescriptionResolver;
 import org.jboss.as.controller.logging.ControllerLogger;
@@ -111,6 +113,7 @@ import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceController.State;
 import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.value.InjectedValue;
 import org.wildfly.common.function.ExceptionSupplier;
@@ -280,6 +283,12 @@ class SSLDefinitions {
     static final SimpleAttributeDefinition WRAP = new SimpleAttributeDefinitionBuilder(ElytronDescriptionConstants.WRAP, ModelType.BOOLEAN, true)
             .setAllowExpression(true)
             .setDefaultValue(ModelNode.FALSE)
+            .setRestartAllServices()
+            .build();
+
+    static final SimpleAttributeDefinition GENERATE_SELF_SIGNED_CERTIFICATE_HOST = new SimpleAttributeDefinitionBuilder(ElytronDescriptionConstants.GENERATE_SELF_SIGNED_CERTIFICATE_HOST, ModelType.STRING, true)
+            .setAllowExpression(true)
+            .setMinSize(1)
             .setRestartAllServices()
             .build();
 
@@ -496,7 +505,7 @@ class SSLDefinitions {
 
         final ObjectTypeAttributeDefinition credentialReferenceDefinition = CredentialReference.getAttributeDefinition(true);
 
-        AttributeDefinition[] attributes = new AttributeDefinition[]{ALGORITHM, providersDefinition, PROVIDER_NAME, keystoreDefinition, ALIAS_FILTER, credentialReferenceDefinition};
+        AttributeDefinition[] attributes = new AttributeDefinition[]{ALGORITHM, providersDefinition, PROVIDER_NAME, keystoreDefinition, ALIAS_FILTER, credentialReferenceDefinition, GENERATE_SELF_SIGNED_CERTIFICATE_HOST};
 
         AbstractAddStepHandler add = new TrivialAddHandler<KeyManager>(KeyManager.class, attributes, KEY_MANAGER_RUNTIME_CAPABILITY) {
 
@@ -529,6 +538,7 @@ class SSLDefinitions {
 
                 final String aliasFilter = ALIAS_FILTER.resolveModelAttribute(context, model).asStringOrNull();
                 final String algorithm = algorithmName != null ? algorithmName : KeyManagerFactory.getDefaultAlgorithm();
+                final String generateSelfSignedCertificateHost = GENERATE_SELF_SIGNED_CERTIFICATE_HOST.resolveModelAttribute(context, model).asStringOrNull();
 
                 ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier =
                         CredentialReference.getCredentialSourceSupplier(context, credentialReferenceDefinition, model, serviceBuilder);
@@ -1449,6 +1459,14 @@ class SSLDefinitions {
         }
 
         return Boolean.FALSE::booleanValue;
+    }
+
+    static ModifiableKeyStoreService getModifiableKeyStoreService(OperationContext context, String keyStoreName) {
+        ServiceRegistry serviceRegistry = context.getServiceRegistry(true);
+        RuntimeCapability<Void> runtimeCapability = KEY_STORE_RUNTIME_CAPABILITY.fromBaseCapability(keyStoreName);
+        ServiceName serviceName = runtimeCapability.getCapabilityServiceName();
+        ServiceController<KeyStore> serviceContainer = getRequiredService(serviceRegistry, serviceName, KeyStore.class);
+        return (ModifiableKeyStoreService) serviceContainer.getService();
     }
 
 }
