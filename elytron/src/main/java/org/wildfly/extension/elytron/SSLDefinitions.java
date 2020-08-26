@@ -78,7 +78,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509ExtendedTrustManager;
-import javax.security.auth.x500.X500Principal;
+//import javax.security.auth.x500.X500Principal;
 
 import org.jboss.as.controller.AbstractAddStepHandler;
 import org.jboss.as.controller.AttributeDefinition;
@@ -138,7 +138,7 @@ import org.wildfly.security.ssl.SNIContextMatcher;
 import org.wildfly.security.ssl.SNISSLContext;
 import org.wildfly.security.ssl.SSLContextBuilder;
 import org.wildfly.security.ssl.X509RevocationTrustManager;
-import org.wildfly.security.x500.cert.SelfSignedX509CertificateAndSigningKey;
+//import org.wildfly.security.x500.cert.SelfSignedX509CertificateAndSigningKey;
 
 /**
  * Definitions for resources used to configure SSLContexts.

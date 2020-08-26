@@ -37,9 +37,9 @@ import java.security.cert.X509Certificate;
 import java.util.Enumeration;
 import java.util.function.Supplier;
 
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.X509ExtendedKeyManager;
+//import javax.net.ssl.KeyManager;
+//import javax.net.ssl.KeyManagerFactory;
+//import javax.net.ssl.X509ExtendedKeyManager;
 import javax.security.auth.x500.X500Principal;
 
 import org.jboss.as.controller.OperationFailedException;
@@ -335,7 +335,7 @@ class KeyStoreService implements ModifiableKeyStoreService {
     boolean generateAndSaveSelfSignedCertificate(String hostName) {
         try {
             if (keyStore.size() == 0) {
-                SelfSignedX509CertificateAndSigningKey selfSignedX509CertificateAndSigningKey = SelfSignedX509CertificateAndSigningKey.builder().setDn(new X500Principal("CN=localhost")).build();
+                SelfSignedX509CertificateAndSigningKey selfSignedX509CertificateAndSigningKey = SelfSignedX509CertificateAndSigningKey.builder().setDn(new X500Principal("CN=localhost")).setKeyAlgorithmName("RSA").build();
                 keyStore.setKeyEntry("server", selfSignedX509CertificateAndSigningKey.getSigningKey(), "password".toCharArray(), new X509Certificate[]{selfSignedX509CertificateAndSigningKey.getSelfSignedCertificate()});
                 save();
                 return true;
