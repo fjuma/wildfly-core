@@ -66,7 +66,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -539,17 +538,18 @@ class SSLDefinitions {
                 ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier =
                         CredentialReference.getCredentialSourceSupplier(context, credentialReferenceDefinition, model, serviceBuilder);
 
+                ModifiableKeyStoreService keyStoreService = getModifiableKeyStoreService(context, keyStoreName);
                 boolean blah = true;
                 DelegatingKeyManager delegatingKeyManager;
-                Supplier<ModifiableKeyStoreService> keyStoreServiceSupplier = () -> {
+                /*Supplier<ModifiableKeyStoreService> keyStoreServiceSupplier = () -> {
                     try {
                         return getModifiableKeyStoreService(context, keyStoreName);
                     } catch (Exception e) {
                         return null;
                     }
-                };
+                };*/
                 if (blah) {
-                    delegatingKeyManager = new SelfSignedCertificateDelegatingKeyManager(keyStoreInjector, credentialSourceSupplier, keyStoreServiceSupplier);
+                    delegatingKeyManager = new SelfSignedCertificateDelegatingKeyManager(keyStoreInjector, credentialSourceSupplier, keyStoreService);
                 } else {
                     delegatingKeyManager = new DelegatingKeyManager();
                 }
@@ -992,13 +992,13 @@ class SSLDefinitions {
         private final AtomicReference<X509ExtendedKeyManager> delegating = new AtomicReference<>();
         private final InjectedValue<KeyStore> keyStoreInjector;
         private final ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier;
-        private final Supplier<ModifiableKeyStoreService> keyStoreServiceSupplier;
+        private final ModifiableKeyStoreService keyStoreService;
 
         SelfSignedCertificateDelegatingKeyManager(InjectedValue<KeyStore> keyStoreInjector, ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier,
-                                                  Supplier<ModifiableKeyStoreService> keyStoreServiceSupplier) {
+                                                  ModifiableKeyStoreService keyStoreService) {
             this.keyStoreInjector = keyStoreInjector;
             this.credentialSourceSupplier = credentialSourceSupplier;
-            this.keyStoreServiceSupplier = keyStoreServiceSupplier;
+            this.keyStoreService = keyStoreService;
         }
 
         private void setKeyManager(X509ExtendedKeyManager keyManager) {
@@ -1008,19 +1008,9 @@ class SSLDefinitions {
         @Override
         public String chooseEngineServerAlias(String keyType, Principal[] issuers, SSLEngine engine) {
             try {
-                KeyStore keyStore = keyStoreInjector.getOptionalValue();
-                CredentialSource cs = credentialSourceSupplier.get();
-                ModifiableKeyStoreService keyStoreService = keyStoreServiceSupplier.get();
-                char[] password;
-                if (cs != null) {
-                    password = cs.getCredential(PasswordCredential.class).getPassword(ClearPassword.class).getPassword();
-                }
-                if (keyStore.size() == 0) {
-                    SelfSignedX509CertificateAndSigningKey selfSignedX509CertificateAndSigningKey = SelfSignedX509CertificateAndSigningKey.builder().setDn(new X500Principal("CN=localhost")).build();
-                    keyStore.setKeyEntry("server", selfSignedX509CertificateAndSigningKey.getSigningKey(), "password".toCharArray(), new X509Certificate[]{selfSignedX509CertificateAndSigningKey.getSelfSignedCertificate()});
-                    ((KeyStoreService) keyStoreService).save();
+                if (((KeyStoreService) keyStoreService).generateAndSaveSelfSignedCertificate("localhost")) {
                     KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()); // wrong, need providers, alg, etc.
-                    keyManagerFactory.init(keyStore, "password".toCharArray());
+                    keyManagerFactory.init(keyStoreInjector.getOptionalValue(), "password".toCharArray());
                     KeyManager[] keyManagers = keyManagerFactory.getKeyManagers();
                     for (KeyManager keyManager : keyManagers) {
                         if (keyManager instanceof X509ExtendedKeyManager) {
@@ -1528,11 +1518,6 @@ class SSLDefinitions {
         ServiceName serviceName = runtimeCapability.getCapabilityServiceName();
 
         ServiceController<KeyStore> serviceContainer = getRequiredService(serviceRegistry, serviceName, KeyStore.class);
-        ServiceController.State serviceState = serviceContainer.getState();
-        if (serviceState != ServiceController.State.UP) {
-            throw ROOT_LOGGER.requiredServiceNotUp(serviceName, serviceState);
-        }
-
         return (ModifiableKeyStoreService) serviceContainer.getService();
     }
 

@@ -37,6 +37,11 @@ import java.security.cert.X509Certificate;
 import java.util.Enumeration;
 import java.util.function.Supplier;
 
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.X509ExtendedKeyManager;
+import javax.security.auth.x500.X500Principal;
+
 import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.services.path.PathManager;
 import org.jboss.logging.Logger;
@@ -58,6 +63,7 @@ import org.wildfly.security.keystore.KeyStoreUtil;
 import org.wildfly.security.keystore.ModifyTrackingKeyStore;
 import org.wildfly.security.keystore.UnmodifiableKeyStore;
 import org.wildfly.security.password.interfaces.ClearPassword;
+import org.wildfly.security.x500.cert.SelfSignedX509CertificateAndSigningKey;
 
 /**
  * A {@link Service} responsible for a single {@link KeyStore} instance.
@@ -324,6 +330,20 @@ class KeyStoreService implements ModifiableKeyStoreService {
             pathResolver.relativeTo(relativeTo, pathManager.getValue());
         }
         return pathResolver.resolve();
+    }
+
+    boolean generateAndSaveSelfSignedCertificate(String hostName) {
+        try {
+            if (keyStore.size() == 0) {
+                SelfSignedX509CertificateAndSigningKey selfSignedX509CertificateAndSigningKey = SelfSignedX509CertificateAndSigningKey.builder().setDn(new X500Principal("CN=localhost")).build();
+                keyStore.setKeyEntry("server", selfSignedX509CertificateAndSigningKey.getSigningKey(), "password".toCharArray(), new X509Certificate[]{selfSignedX509CertificateAndSigningKey.getSelfSignedCertificate()});
+                save();
+                return true;
+            }
+        } catch (Exception e) {
+            //
+        }
+        return false;
     }
 
     static class LoadKey {
