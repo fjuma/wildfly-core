@@ -114,6 +114,7 @@ import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceController.State;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceRegistry;
+import org.jboss.msc.service.ServiceTarget;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.value.InjectedValue;
 import org.wildfly.common.function.ExceptionSupplier;
@@ -506,8 +507,9 @@ class SSLDefinitions {
         final ObjectTypeAttributeDefinition credentialReferenceDefinition = CredentialReference.getAttributeDefinition(true);
 
         AttributeDefinition[] attributes = new AttributeDefinition[]{ALGORITHM, providersDefinition, PROVIDER_NAME, keystoreDefinition, ALIAS_FILTER, credentialReferenceDefinition, GENERATE_SELF_SIGNED_CERTIFICATE_HOST};
+        KeyManagerAddHandler addHandler = new KeyManagerAddHandler();
 
-        AbstractAddStepHandler add = new TrivialAddHandler<KeyManager>(KeyManager.class, attributes, KEY_MANAGER_RUNTIME_CAPABILITY) {
+        /*AbstractAddStepHandler add = new TrivialAddHandler<KeyManager>(KeyManager.class, attributes, KEY_MANAGER_RUNTIME_CAPABILITY) {
 
             @Override
             protected void populateModel(final OperationContext context, final ModelNode operation, final Resource resource) throws  OperationFailedException {
@@ -612,7 +614,7 @@ class SSLDefinitions {
             protected void rollbackRuntime(OperationContext context, final ModelNode operation, final Resource resource) {
                 rollbackCredentialStoreUpdate(credentialReferenceDefinition, context, resource);
             }
-        };
+        };*/
 
         final ServiceUtil<KeyManager> KEY_MANAGER_UTIL = ServiceUtil.newInstance(KEY_MANAGER_RUNTIME_CAPABILITY, ElytronDescriptionConstants.KEY_MANAGER, KeyManager.class);
         return TrivialResourceDefinition.builder()
@@ -624,6 +626,118 @@ class SSLDefinitions {
                         .setRuntimeOnly()
                         .build(), init(KEY_MANAGER_UTIL))
                 .build();
+
+        class KeyManagerAddHandler extends BaseAddHandler {
+
+            private KeyManagerAddHandler(AttributeDefinition[] attributes) {
+                super(KEY_MANAGER_RUNTIME_CAPABILITY, attributes);
+            }
+
+            @Override
+            protected void populateModel(final OperationContext context, final ModelNode operation, final Resource resource) throws  OperationFailedException {
+                super.populateModel(context, operation, resource);
+                handleCredentialReferenceUpdate(context, resource.getModel());
+            }
+
+            @Override
+            protected void performRuntime(OperationContext context, ModelNode operation, ModelNode model)
+                    throws OperationFailedException {
+                final String algorithmName = ALGORITHM.resolveModelAttribute(context, model).asStringOrNull();
+                final String providerName = PROVIDER_NAME.resolveModelAttribute(context, model).asStringOrNull();
+
+                String providersName = providersDefinition.resolveModelAttribute(context, model).asStringOrNull();
+                final InjectedValue<Provider[]> providersInjector = new InjectedValue<>();
+                if (providersName != null) {
+                    serviceBuilder.addDependency(context.getCapabilityServiceName(
+                            buildDynamicCapabilityName(PROVIDERS_CAPABILITY, providersName), Provider[].class),
+                            Provider[].class, providersInjector);
+                }
+
+                final String keyStoreName = keystoreDefinition.resolveModelAttribute(context, model).asStringOrNull();
+                final InjectedValue<KeyStore> keyStoreInjector = new InjectedValue<>();
+                if (keyStoreName != null) {
+                    serviceBuilder.addDependency(context.getCapabilityServiceName(
+                            buildDynamicCapabilityName(KEY_STORE_CAPABILITY, keyStoreName), KeyStore.class),
+                            KeyStore.class, keyStoreInjector);
+                }
+
+                final String aliasFilter = ALIAS_FILTER.resolveModelAttribute(context, model).asStringOrNull();
+                final String algorithm = algorithmName != null ? algorithmName : KeyManagerFactory.getDefaultAlgorithm();
+                final String generateSelfSignedCertificateHost = GENERATE_SELF_SIGNED_CERTIFICATE_HOST.resolveModelAttribute(context, model).asStringOrNull();
+
+                ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier =
+                        CredentialReference.getCredentialSourceSupplier(context, credentialReferenceDefinition, model, serviceBuilder);
+
+                DelegatingKeyManager delegatingKeyManager = new DelegatingKeyManager();
+
+
+
+
+
+
+
+
+
+
+
+                ServiceTarget serviceTarget = context.getServiceTarget();
+
+                String address = context.getCurrentAddressValue();
+                ServiceName mainServiceName = MODIFIABLE_SECURITY_REALM_RUNTIME_CAPABILITY.fromBaseCapability(address).getCapabilityServiceName();
+                ServiceName aliasServiceName = SECURITY_REALM_RUNTIME_CAPABILITY.fromBaseCapability(address).getCapabilityServiceName();
+
+                final int levels = LEVELS.resolveModelAttribute(context, model).asInt();
+
+                final boolean encoded = ENCODED.resolveModelAttribute(context, model).asBoolean();
+
+                final String path = PATH.resolveModelAttribute(context, model).asString();
+                final String relativeTo = RELATIVE_TO.resolveModelAttribute(context, model).asStringOrNull();
+
+                final InjectedValue<PathManager> pathManagerInjector = new InjectedValue<>();
+                final InjectedValue<NameRewriter> nameRewriterInjector = new InjectedValue<>();
+
+                TrivialService<SecurityRealm> fileSystemRealmService = new TrivialService<>(
+                        new TrivialService.ValueSupplier<SecurityRealm>() {
+
+                            private PathResolver pathResolver;
+
+                            @Override
+                            public SecurityRealm get() throws StartException {
+                                pathResolver = pathResolver();
+                                Path rootPath = pathResolver.path(path).relativeTo(relativeTo, pathManagerInjector.getOptionalValue()).resolve().toPath();
+
+                                NameRewriter nameRewriter = nameRewriterInjector.getOptionalValue();
+
+                                return nameRewriter != null ?
+                                        new FileSystemSecurityRealm(rootPath, nameRewriter, levels, encoded) :
+                                        new FileSystemSecurityRealm(rootPath, NameRewriter.IDENTITY_REWRITER, levels, encoded);
+                            }
+
+                            @Override
+                            public void dispose() {
+                                if (pathResolver != null) {
+                                    pathResolver.clear();
+                                    pathResolver = null;
+                                }
+                            }
+
+                        });
+
+                ServiceBuilder<SecurityRealm> serviceBuilder = serviceTarget.addService(mainServiceName, fileSystemRealmService)
+                        .addAliases(aliasServiceName);
+
+                if (relativeTo != null) {
+                    serviceBuilder.addDependency(PathManagerService.SERVICE_NAME, PathManager.class, pathManagerInjector);
+                    serviceBuilder.requires(pathName(relativeTo));
+                }
+                serviceBuilder.install();
+            }
+
+            @Override
+            protected void rollbackRuntime(OperationContext context, final ModelNode operation, final Resource resource) {
+                rollbackCredentialStoreUpdate(credentialReferenceDefinition, context, resource);
+            }
+        }
     }
 
     private abstract static class ReloadableX509ExtendedTrustManager extends X509ExtendedTrustManager {
@@ -978,11 +1092,11 @@ class SSLDefinitions {
         };
     }
 
-    private static class DelegatingKeyManager extends X509ExtendedKeyManager {
+    static class DelegatingKeyManager extends X509ExtendedKeyManager {
 
         private final AtomicReference<X509ExtendedKeyManager> delegating = new AtomicReference<>();
 
-        private void setKeyManager(X509ExtendedKeyManager keyManager) {
+        void setKeyManager(X509ExtendedKeyManager keyManager) {
             delegating.set(keyManager);
         }
 
