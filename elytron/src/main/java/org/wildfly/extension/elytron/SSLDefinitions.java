@@ -287,12 +287,6 @@ class SSLDefinitions {
             .setRestartAllServices()
             .build();
 
-    static final SimpleAttributeDefinition GENERATE_SELF_SIGNED_CERTIFICATE_HOST = new SimpleAttributeDefinitionBuilder(ElytronDescriptionConstants.GENERATE_SELF_SIGNED_CERTIFICATE_HOST, ModelType.STRING, true)
-            .setAllowExpression(true)
-            .setMinSize(1)
-            .setRestartAllServices()
-            .build();
-
     static final SimpleAttributeDefinition KEY_MANAGER = new SimpleAttributeDefinitionBuilder(ElytronDescriptionConstants.KEY_MANAGER, ModelType.STRING, true)
             .setMinSize(1)
             .setCapabilityReference(KEY_MANAGER_CAPABILITY, SSL_CONTEXT_CAPABILITY)
@@ -663,7 +657,6 @@ class SSLDefinitions {
 
                 final String aliasFilter = ALIAS_FILTER.resolveModelAttribute(context, model).asStringOrNull();
                 final String algorithm = algorithmName != null ? algorithmName : KeyManagerFactory.getDefaultAlgorithm();
-                final String generateSelfSignedCertificateHost = GENERATE_SELF_SIGNED_CERTIFICATE_HOST.resolveModelAttribute(context, model).asStringOrNull();
 
                 ExceptionSupplier<CredentialSource, Exception> credentialSourceSupplier =
                         CredentialReference.getCredentialSourceSupplier(context, credentialReferenceDefinition, model, serviceBuilder);
@@ -1242,11 +1235,17 @@ class SSLDefinitions {
                 .setRestartAllServices()
                 .build();
 
+        final SimpleAttributeDefinition GENERATE_SELF_SIGNED_CERTIFICATE_HOST = new SimpleAttributeDefinitionBuilder(ElytronDescriptionConstants.GENERATE_SELF_SIGNED_CERTIFICATE_HOST, ModelType.STRING, true)
+                .setAllowExpression(true)
+                .setMinSize(1)
+                .setRestartAllServices()
+                .build();
+
         AttributeDefinition[] attributes = new AttributeDefinition[]{CIPHER_SUITE_FILTER, CIPHER_SUITE_NAMES, PROTOCOLS,
                 SECURITY_DOMAIN, WANT_CLIENT_AUTH, NEED_CLIENT_AUTH, AUTHENTICATION_OPTIONAL,
                 USE_CIPHER_SUITES_ORDER, MAXIMUM_SESSION_CACHE_SIZE, SESSION_TIMEOUT, WRAP, keyManagerDefinition, TRUST_MANAGER,
                 PRE_REALM_PRINCIPAL_TRANSFORMER, POST_REALM_PRINCIPAL_TRANSFORMER, FINAL_PRINCIPAL_TRANSFORMER, REALM_MAPPER,
-                providersDefinition, PROVIDER_NAME};
+                providersDefinition, PROVIDER_NAME, GENERATE_SELF_SIGNED_CERTIFICATE_HOST};
 
         AbstractAddStepHandler add = new TrivialAddHandler<SSLContext>(SSLContext.class, ServiceController.Mode.ACTIVE, ServiceController.Mode.PASSIVE, attributes, SSL_CONTEXT_RUNTIME_CAPABILITY) {
 
@@ -1274,6 +1273,7 @@ class SSLDefinitions {
                 final int maximumSessionCacheSize = MAXIMUM_SESSION_CACHE_SIZE.resolveModelAttribute(context, model).asInt();
                 final int sessionTimeout = SESSION_TIMEOUT.resolveModelAttribute(context, model).asInt();
                 final boolean wrap = WRAP.resolveModelAttribute(context, model).asBoolean();
+                final String generateSelfSignedCertificateHost = GENERATE_SELF_SIGNED_CERTIFICATE_HOST.resolveModelAttribute(context, model).asStringOrNull();
 
                 return () -> {
                     SecurityDomain securityDomain = securityDomainInjector.getOptionalValue();
