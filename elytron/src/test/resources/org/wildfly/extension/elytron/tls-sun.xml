@@ -2,7 +2,7 @@
 <subsystem xmlns="urn:wildfly:elytron:12.0" default-ssl-context="ClientSslContextNoAuth">
     <providers>
         <provider-loader name="ManagerProviderLoader" class-names="com.sun.net.ssl.internal.ssl.Provider" />
-        <provider-loader name="openssl" module="org.wildfly.openssl"/>
+        <provider-loader name="openssl" module="org.wildfly.openssl" class-names="org.wildfly.openssl.OpenSSLProvider"/>
     </providers>
     <security-domains>
         <security-domain name="MyDomain" default-realm="FileRealm">
