@@ -33,6 +33,7 @@ public class SecurityMetaData {
     public static final AttachmentKey<SecurityMetaData> ATTACHMENT_KEY = AttachmentKey.create(SecurityMetaData.class);
 
     private volatile ServiceName securityDomain;
+    private volatile ServiceName httpServerAuthenticationMechanismFactory;
 
     /**
      * Get the {@code ServiceName} of the {@code SecurityDomain} selected for use with this deployment.
@@ -50,6 +51,24 @@ public class SecurityMetaData {
      */
     public void setSecurityDomain(ServiceName securityDomain) {
         this.securityDomain = securityDomain;
+    }
+
+    /**
+     * Get the {@code ServiceName} of the {@code HttpServerAuthenticationMechanismFactory} selected for use with this deployment.
+     *
+     * @return the {@code ServiceName} of the {@code HttpServerAuthenticationMechanismFactory} selected for use with this deployment.
+     */
+    public ServiceName getHttpServerAuthenticationMechanismFactory() {
+        return httpServerAuthenticationMechanismFactory;
+    }
+
+    /**
+     * Get the {@code ServiceName} of the {@code HttpServerAuthenticationMechanismFactory} selected for use with this deployment.
+     *
+     * @return the {@code ServiceName} of the {@code HttpServerAuthenticationMechanismFactory} selected for use with this deployment.
+     */
+    public void setHttpServerAuthenticationMechanismFactory(ServiceName httpServerAuthenticationMechanismFactory) {
+        this.httpServerAuthenticationMechanismFactory = httpServerAuthenticationMechanismFactory;
     }
 
 }
