@@ -17,8 +17,6 @@
 package org.wildfly.extension.elytron;
 
 import static org.jboss.as.server.security.SecurityMetaData.ATTACHMENT_KEY;
-import static org.jboss.as.server.security.VirtualDomainMarkerUtility.isVirtualDomainRequired;
-import static org.jboss.as.server.security.VirtualDomainMarkerUtility.virtualDomainName;
 import static org.jboss.as.server.security.VirtualHttpServerMechanismFactoryMarkerUtility.isVirtualMechanismFactoryRequired;
 import static org.jboss.as.server.security.VirtualHttpServerMechanismFactoryMarkerUtility.virtualMechanismFactory;
 

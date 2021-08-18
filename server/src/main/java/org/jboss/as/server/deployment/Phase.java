@@ -404,6 +404,7 @@ public enum Phase {
     public static final int PARSE_MONGO_DRIVER                          = 0x4C03;
     public static final int PARSE_MICROPROFILE_JWT_DETECTION            = 0x4C0D;
     public static final int PARSE_DEFINE_VIRTUAL_DOMAIN_NAME            = 0x4C17;
+    public static final int PARSE_DEFINE_VIRTUAL_HTTP_SERVER_MECHANISM_FACTORY_NAME            = 0x4C18;
 
     // REGISTER
     /**
