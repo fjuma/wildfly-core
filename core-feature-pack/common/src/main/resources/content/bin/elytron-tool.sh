@@ -75,10 +75,24 @@ if $cygwin; then
     JBOSS_HOME=`cygpath --path --windows "$JBOSS_HOME"`
 fi
 
+if [ "x$JBOSS_MODULEPATH" = "x" ]; then
+    JBOSS_MODULEPATH="$JBOSS_HOME/modules"
+fi
+
+# For Cygwin, switch paths to Windows format before running java
+if $cygwin; then
+    JBOSS_HOME=`cygpath --path --windows "$JBOSS_HOME"`
+    JAVA_HOME=`cygpath --path --windows "$JAVA_HOME"`
+    JBOSS_MODULEPATH=`cygpath --path --windows "$JBOSS_MODULEPATH"`
+fi
+
 if [ "x$ELYTRON_TOOL_ADDONS" != "x" ]; then
     ELYTRON_TOOL_SEP=:
 fi    
 
-eval \"$JAVA\" $JAVA_OPTS -cp \""$JBOSS_HOME"/bin/wildfly-elytron-tool.jar$ELYTRON_TOOL_SEP$ELYTRON_TOOL_ADDONS\" \
-         org.wildfly.security.tool.ElytronTool \
+eval \"$JAVA\" $JAVA_OPTS \
+         -cp \"$ELYTRON_TOOL_ADDONS\" \
+         -jar \""$JBOSS_HOME"/jboss-modules.jar\" \
+         -mp \""${JBOSS_MODULEPATH}"\" \
+         org.wildfly.security.elytron-tool \
          '{"$0"}"$@"'
