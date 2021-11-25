@@ -38,7 +38,7 @@ public interface ElytronToolWrapperMessages extends BasicLogger {
 
     @Message(id = Message.NONE, value = "To make use of the WildFly Elytron Tool, the elytron-tool script should be used instead of wildfly-elytron-tool.jar.\n\n" +
             "Run elytron-tool.sh, elytron-tool.bat, or elytron-tool.ps1 with the same arguments that were previously passed when using wildfly-elytron-tool.jar.\n\n" +
-            "For example, run:\n %s")
+            "For example, run:\n%s")
     String redirectToScript(String command);
 
     @Message(id = Message.NONE, value = "To make use of the WildFly Elytron Tool, the elytron-tool script should be used instead of wildfly-elytron-tool.jar.\n" +

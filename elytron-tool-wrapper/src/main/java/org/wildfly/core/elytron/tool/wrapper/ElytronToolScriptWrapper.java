@@ -45,7 +45,7 @@ public class ElytronToolScriptWrapper {
             if (parentDir != null) {
                 String parentDirPath = parentDir.getAbsolutePath();
                 StringBuilder elytronToolScriptCommand = new StringBuilder(parentDirPath + File.separator + ELYTRON_TOOL_SCRIPT + " ");
-                Arrays.stream(args).forEach(arg -> elytronToolScriptCommand.append(arg));
+                Arrays.stream(args).forEach(arg -> elytronToolScriptCommand.append(arg + " "));
                 System.out.println(ElytronToolWrapperMessages.ROOT_LOGGER.redirectToScript(elytronToolScriptCommand.toString()));
                 return;
             }
