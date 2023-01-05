@@ -17,7 +17,7 @@
   -->
 
 <!-- for needs of DomainTestCase -->
-<subsystem xmlns="urn:wildfly:elytron:16.0" register-jaspi-factory="${exp.jaspi:false}" default-ssl-context="client" disallowed-providers="${exp.providers:test}">
+<subsystem xmlns="urn:wildfly:elytron:17.0" register-jaspi-factory="${exp.jaspi:false}" default-ssl-context="client" disallowed-providers="${exp.providers:test}">
     <providers>
         <provider-loader name="openssl" module="org.wildfly.openssl">
             <configuration>

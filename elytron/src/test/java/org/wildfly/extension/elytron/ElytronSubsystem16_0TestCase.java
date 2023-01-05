@@ -35,7 +35,12 @@ public class ElytronSubsystem16_0TestCase extends AbstractElytronSubsystemBaseTe
 
     @Override
     protected String getSubsystemXml() throws IOException {
-        return readResource("elytron-subsystem-16.0.xml");
+        return readResource("legacy-elytron-subsystem-16.0.xml");
+    }
+
+    @Override
+    protected void compareXml(String configId, String original, String marshalled) throws Exception {
+        //
     }
 
     @Override
