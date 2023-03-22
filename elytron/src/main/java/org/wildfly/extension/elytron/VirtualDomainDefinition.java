@@ -41,15 +41,21 @@ import org.jboss.as.controller.OperationStepHandler;
 import org.jboss.as.controller.PathAddress;
 import org.jboss.as.controller.PathElement;
 import org.jboss.as.controller.ResourceDefinition;
+import org.jboss.as.controller.SimpleAttributeDefinition;
+import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
 import org.jboss.as.controller.SimpleResourceDefinition;
 import org.jboss.as.controller.StringListAttributeDefinition;
 import org.jboss.as.controller.capability.RuntimeCapability;
+import org.jboss.as.controller.operations.validation.EnumValidator;
 import org.jboss.as.controller.registry.AttributeAccess;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.as.controller.registry.OperationEntry;
+import org.jboss.as.server.security.VirtualDomainMarkerUtility;
 import org.jboss.as.server.security.VirtualDomainMetaData;
 import org.jboss.as.server.security.VirtualDomainMetaDataService;
+import org.jboss.as.server.security.VirtualDomainUtil;
 import org.jboss.dmr.ModelNode;
+import org.jboss.dmr.ModelType;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceController.Mode;
@@ -58,8 +64,10 @@ import org.jboss.msc.service.ServiceTarget;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.value.InjectedValue;
 import org.wildfly.extension.elytron.TrivialService.ValueSupplier;
+import org.wildfly.security.auth.permission.LoginPermission;
 import org.wildfly.security.auth.server.SecurityDomain;
 import org.wildfly.security.auth.server.SecurityIdentity;
+import org.wildfly.security.http.oidc.OidcSecurityRealm;
 
 /**
  * A {@link ResourceDefinition} for a virtual security domain.
@@ -68,6 +76,8 @@ import org.wildfly.security.auth.server.SecurityIdentity;
  */
 class VirtualDomainDefinition extends SimpleResourceDefinition {
 
+    private static final String VIRTUAL_REALM = "virtual";
+
     static final StringListAttributeDefinition OUTFLOW_SECURITY_DOMAINS = new StringListAttributeDefinition.Builder(ElytronDescriptionConstants.OUTFLOW_SECURITY_DOMAINS)
             .setRequired(false)
             .setMinSize(1)
@@ -75,7 +85,12 @@ class VirtualDomainDefinition extends SimpleResourceDefinition {
             .setCapabilityReference(SECURITY_DOMAIN_CAPABILITY, VIRTUAL_SECURITY_DOMAIN_CAPABILITY)
             .build();
 
-    private static final AttributeDefinition[] ATTRIBUTES = new AttributeDefinition[] { OUTFLOW_SECURITY_DOMAINS, OUTFLOW_ANONYMOUS };
+    static final SimpleAttributeDefinition AUTH_METHOD = new SimpleAttributeDefinitionBuilder(ElytronDescriptionConstants.AUTH_METHOD, ModelType.STRING, true)
+            .setDefaultValue(new ModelNode(VirtualDomainMetaData.AuthMethod.OIDC.toString()))
+            .setValidator(EnumValidator.create(VirtualDomainMetaData.AuthMethod.class))
+            .build();
+
+    private static final AttributeDefinition[] ATTRIBUTES = new AttributeDefinition[] { OUTFLOW_SECURITY_DOMAINS, OUTFLOW_ANONYMOUS, AUTH_METHOD };
 
     private static final VirtualDomainAddHandler ADD = new VirtualDomainAddHandler();
     private static final OperationStepHandler REMOVE = new VirtualDomainRemoveHandler(ADD);
@@ -99,9 +114,10 @@ class VirtualDomainDefinition extends SimpleResourceDefinition {
     }
 
     private static ServiceController<VirtualDomainMetaData> installInitialService(OperationContext context, ServiceName initialName,
-                                                                                  UnaryOperator<SecurityIdentity> identityOperator) throws OperationFailedException {
+                                                                                  UnaryOperator<SecurityIdentity> identityOperator,
+                                                                                  VirtualDomainMetaData.AuthMethod authMethod) throws OperationFailedException {
         ServiceTarget serviceTarget = context.getServiceTarget();
-        VirtualDomainMetaDataService virtualDomainService = new VirtualDomainMetaDataService(identityOperator);
+        VirtualDomainMetaDataService virtualDomainService = new VirtualDomainMetaDataService(identityOperator, authMethod);
         ServiceBuilder<VirtualDomainMetaData> virtualDomainBuilder = serviceTarget.addService(initialName, virtualDomainService)
                 .setInitialMode(Mode.LAZY);
         commonDependencies(virtualDomainBuilder);
@@ -111,15 +127,17 @@ class VirtualDomainDefinition extends SimpleResourceDefinition {
     private static ServiceController<VirtualDomainMetaData> installService(OperationContext context, ServiceName virtualDomainName, ModelNode model) throws OperationFailedException {
         ServiceName initialName = virtualDomainName.append(INITIAL);
 
-        final InjectedValue<VirtualDomainMetaData> virtualDomain = new InjectedValue<>();
+        final InjectedValue<VirtualDomainMetaData> virtualDomainMetaData = new InjectedValue<>();
 
         List<String> outflowSecurityDomainNames = OUTFLOW_SECURITY_DOMAINS.unwrap(context, model);
         final boolean outflowAnonymous = OUTFLOW_ANONYMOUS.resolveModelAttribute(context, model).asBoolean();
+        final String authMethod = AUTH_METHOD.resolveModelAttribute(context, model).asString();
         final List<InjectedValue<SecurityDomain>> outflowSecurityDomainInjectors = new ArrayList<>(outflowSecurityDomainNames.size());
         final Set<SecurityDomain> outflowSecurityDomains = new HashSet<>();
 
         installInitialService(context, initialName,
-                ! outflowSecurityDomainNames.isEmpty() ? i -> outflow(i, outflowAnonymous, outflowSecurityDomains) : UnaryOperator.identity());
+                ! outflowSecurityDomainNames.isEmpty() ? i -> outflow(i, outflowAnonymous, outflowSecurityDomains) : UnaryOperator.identity(),
+                VirtualDomainMetaData.AuthMethod.forName(authMethod));
 
         TrivialService<VirtualDomainMetaData> finalVirtualDomainService = new TrivialService<>();
         finalVirtualDomainService.setValueSupplier(new ValueSupplier<VirtualDomainMetaData>() {
@@ -129,22 +147,47 @@ class VirtualDomainDefinition extends SimpleResourceDefinition {
                 for (InjectedValue<SecurityDomain> i : outflowSecurityDomainInjectors) {
                     outflowSecurityDomains.add(i.getValue());
                 }
-                return virtualDomain.getValue();
+                return virtualDomainMetaData.getValue();
             }
         });
 
         ServiceTarget serviceTarget = context.getServiceTarget();
-        ServiceBuilder<VirtualDomainMetaData> virtualDomainBuilder = serviceTarget.addService(virtualDomainName, finalVirtualDomainService)
+        ServiceBuilder<VirtualDomainMetaData> virtualDomainMetaDataBuilder = serviceTarget.addService(virtualDomainName, finalVirtualDomainService)
                 .setInitialMode(Mode.ACTIVE);
-        virtualDomainBuilder.addDependency(initialName, VirtualDomainMetaData.class, virtualDomain);
+        virtualDomainMetaDataBuilder.addDependency(initialName, VirtualDomainMetaData.class, virtualDomainMetaData);
         for (String outflowDomainName : outflowSecurityDomainNames) {
             InjectedValue<SecurityDomain> outflowDomainInjector = new InjectedValue<>();
-            virtualDomainBuilder.addDependency(context.getCapabilityServiceName(SECURITY_DOMAIN_CAPABILITY, outflowDomainName, SecurityDomain.class).append(INITIAL), SecurityDomain.class, outflowDomainInjector);
+            virtualDomainMetaDataBuilder.addDependency(context.getCapabilityServiceName(SECURITY_DOMAIN_CAPABILITY, outflowDomainName, SecurityDomain.class).append(INITIAL), SecurityDomain.class, outflowDomainInjector);
             outflowSecurityDomainInjectors.add(outflowDomainInjector);
         }
 
+        TrivialService<SecurityDomain> virtualSecurityDomainService = new TrivialService<>();
+        virtualSecurityDomainService.setValueSupplier(new ValueSupplier<SecurityDomain>() {
+
+            @Override
+            public SecurityDomain get() throws StartException {
+                VirtualDomainMetaData virtualMetaData = virtualDomainMetaData.getValue();
+                SecurityDomain.Builder virtualDomainBuilder = SecurityDomain.builder();
+                if (virtualMetaData.getAuthMethod() == VirtualDomainMetaData.AuthMethod.OIDC) {
+                    virtualDomainBuilder.addRealm(VIRTUAL_REALM, new OidcSecurityRealm()).build()
+                            .setDefaultRealmName(VIRTUAL_REALM)
+                            .setPermissionMapper((permissionMappable, roles) -> LoginPermission.getInstance());
+                }
+                VirtualDomainUtil.configureVirtualDomain(virtualMetaData, virtualDomainBuilder);
+                SecurityDomain virtualDomain = virtualDomainBuilder.build();
+                virtualMetaData.setSecurityDomain(virtualDomain);
+                return virtualDomain;
+            }
+        });
+
+        ServiceName virtualSecurityDomainName = VirtualDomainMarkerUtility.virtualDomainName(virtualDomainName.getSimpleName());
+        ServiceBuilder<SecurityDomain> virtualDomainServiceBuilder = serviceTarget.addService(virtualSecurityDomainName, virtualSecurityDomainService)
+                .setInitialMode(Mode.ACTIVE);
+        virtualDomainServiceBuilder.addDependency(initialName, VirtualDomainMetaData.class, virtualDomainMetaData);
+        virtualDomainServiceBuilder.install();
+
         // This depends on the initial service which depends on the common dependencies so no need to add them for this one.
-        return virtualDomainBuilder.install();
+        return virtualDomainMetaDataBuilder.install();
     }
 
     private static class VirtualDomainAddHandler extends BaseAddHandler {

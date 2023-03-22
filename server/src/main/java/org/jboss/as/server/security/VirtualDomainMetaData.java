@@ -31,11 +31,37 @@ import org.wildfly.security.auth.server.SecurityIdentity;
  */
 public class VirtualDomainMetaData {
 
+    public enum AuthMethod {
+        OIDC("OIDC"),
+        MP_JWT("MP-JWT");
+
+        private final String name;
+
+        AuthMethod(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
+
+        public static AuthMethod forName(final String name) {
+            switch (name) {
+                case "OIDC": return OIDC;
+                case "MP-JWT": return MP_JWT;
+                default: return null;
+            }
+        }
+    }
+
     private final UnaryOperator<SecurityIdentity> securityIdentityTransformer;
+    private final AuthMethod authMethod;
     private SecurityDomain securityDomain;
 
     VirtualDomainMetaData(Builder builder) {
         this.securityIdentityTransformer = builder.securityIdentityTransformer;
+        this.authMethod = builder.authMethod;
     }
 
     public synchronized SecurityDomain getSecurityDomain() {
@@ -50,12 +76,17 @@ public class VirtualDomainMetaData {
         return securityIdentityTransformer;
     }
 
+    public AuthMethod getAuthMethod() {
+        return authMethod;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
 
     public static class Builder {
         private UnaryOperator<SecurityIdentity> securityIdentityTransformer;
+        private AuthMethod authMethod;
 
         public VirtualDomainMetaData build() {
             return new VirtualDomainMetaData(this);
@@ -64,6 +95,11 @@ public class VirtualDomainMetaData {
         public void setSecurityIdentityTransformer(final UnaryOperator<SecurityIdentity> securityIdentityTransformer) {
             Assert.checkNotNullParam("securityIdentityTransformer", securityIdentityTransformer);
             this.securityIdentityTransformer = securityIdentityTransformer;
+        }
+
+        public void setAuthMethod(final AuthMethod authMethod) {
+            Assert.checkNotNullParam("authMethod", authMethod);
+            this.authMethod = authMethod;
         }
     }
 }

@@ -38,9 +38,8 @@ import org.wildfly.security.auth.server.SecurityIdentity;
  */
 public class VirtualDomainUtil {
 
-    public static VirtualDomainMetaData configureVirtualDomain(DeploymentPhaseContext phaseContext, DeploymentUnit deploymentUnit,
-                                                                        SecurityDomain.Builder virtualDomainBuilder) throws DeploymentUnitProcessingException {
-        VirtualDomainMetaData virtualDomainMetaData = getVirtualDomainMetaData(phaseContext, deploymentUnit);
+    public static void configureVirtualDomain(VirtualDomainMetaData virtualDomainMetaData,
+                                              SecurityDomain.Builder virtualDomainBuilder) {
         UnaryOperator<SecurityIdentity> securityIdentityTransformer;
         if (virtualDomainMetaData != null) {
             securityIdentityTransformer = virtualDomainMetaData.getSecurityIdentityTransformer();
@@ -48,7 +47,6 @@ public class VirtualDomainUtil {
                 virtualDomainBuilder.setSecurityIdentityTransformer(securityIdentityTransformer);
             }
         }
-        return virtualDomainMetaData;
     }
 
     public static void setTopLevelDeploymentSecurityMetaData(DeploymentUnit deploymentUnit, ServiceName virtualDomainName) {
@@ -62,7 +60,7 @@ public class VirtualDomainUtil {
         return (ServiceController<T>) controller;
     }
 
-    private static VirtualDomainMetaData getVirtualDomainMetaData(DeploymentPhaseContext phaseContext, DeploymentUnit deploymentUnit) throws DeploymentUnitProcessingException {
+    public static VirtualDomainMetaData getVirtualDomainMetaData(DeploymentPhaseContext phaseContext, DeploymentUnit deploymentUnit) throws DeploymentUnitProcessingException {
         ServiceName virtualDomainMetaDataName = VirtualDomainMarkerUtility.virtualDomainMetaDataName(phaseContext, deploymentUnit);
         ServiceController<VirtualDomainMetaData> serviceContainer = getService(phaseContext.getServiceRegistry(), virtualDomainMetaDataName, VirtualDomainMetaData.class);
         if (serviceContainer != null) {
