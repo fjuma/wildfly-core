@@ -446,6 +446,7 @@ class DomainDefinition extends SimpleResourceDefinition {
                     synchronized(this) {
                         outflowIdentities = this.outflowIdentities;
                         if (outflowIdentities == null) {
+                            ROOT_LOGGER.trace("INTERMITTENT: Triggering outflow for " + identity.getPrincipal() + " with roles " + String.join(", ", identity.getRoles()));
                             if (WildFlySecurityManager.isChecking()) {
                                 outflowIdentities = doPrivileged((PrivilegedAction<SecurityIdentity[]>) () -> performOutflow(identity, outflowAnonymous, outflowDomains));
                             } else {
@@ -453,10 +454,16 @@ class DomainDefinition extends SimpleResourceDefinition {
                             }
 
                             this.outflowIdentities = outflowIdentities;
+                            if (outflowIdentities.length > 0) {
+                                ROOT_LOGGER.trace("INTERMITTENT: First outflowed identity " + outflowIdentities[0].getPrincipal() + " with roles " + String.join(", ", outflowIdentities[0].getRoles()));
+                            }
                         }
                     }
+                } else {
+                    if (outflowIdentities.length > 0) {
+                        ROOT_LOGGER.trace("INTERMITTENT: outflowIdentities already set " + outflowIdentities[0].getPrincipal() + " with roles " + String.join(", ", outflowIdentities[0].getRoles()));
+                    }
                 }
-
                 return outflowIdentities;
             }
         });
@@ -468,8 +475,10 @@ class DomainDefinition extends SimpleResourceDefinition {
             try(ServerAuthenticationContext sac = d.createNewAuthenticationContext()) {
                 if (sac.importIdentity(identity)) {
                     outflowIdentities.add(sac.getAuthorizedIdentity());
+                    ROOT_LOGGER.trace("INTERMITTENT: Successful outflow " + identity.getPrincipal() + ", Imported info: " + sac.getAuthorizedIdentity().getPrincipal() + ", roles: " + String.join(", ", sac.getAuthorizedIdentity().getRoles()));
                 } else if (outflowAnonymous) {
                     outflowIdentities.add(d.getAnonymousSecurityIdentity());
+                    ROOT_LOGGER.trace("INTERMITTENT: Outflowed anonymous");
                 }
             } catch (RealmUnavailableException e) {
                 throw ROOT_LOGGER.unableToPerformOutflow(identity.getPrincipal().getName(), e);
