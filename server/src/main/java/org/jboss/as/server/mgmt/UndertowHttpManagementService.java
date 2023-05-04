@@ -21,6 +21,8 @@
 */
 package org.jboss.as.server.mgmt;
 
+import static org.jboss.as.server.security.VirtualDomainUtil.getVirtualHttpAuthenticationFactoryServiceName;
+
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -51,7 +53,9 @@ import org.jboss.as.server.mgmt.domain.ExtensibleHttpManagement;
 import org.jboss.as.server.mgmt.domain.HttpManagement;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceBuilder;
+import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
@@ -321,7 +325,7 @@ public class UndertowHttpManagementService implements Service<HttpManagement> {
         }
 
         try {
-            serverManagement = ManagementHttpServer.builder()
+            ManagementHttpServer.Builder serverManagementBuilder = ManagementHttpServer.builder()
                     .setBindAddress(bindAddress)
                     .setSecureBindAddress(secureBindAddress)
                     .setModelController(modelController)
@@ -335,8 +339,17 @@ public class UndertowHttpManagementService implements Service<HttpManagement> {
                     .setWorker(workerSupplier.get())
                     .setExecutor(executorSupplier.get())
                     .setConstantHeaders(constantHeaders)
-                    .setConsoleAvailability(consoleAvailability)
-                    .build();
+                    .setConsoleAvailability(consoleAvailability);
+
+            final HttpAuthenticationFactory virtualHttpAuthenticationFactory = getVirtualHttpAuthenticationFactory(context);
+            if (virtualHttpAuthenticationFactory != null) {
+                // if a virtual one exists, use it instead
+                serverManagementBuilder.setHttpAuthenticationFactory(virtualHttpAuthenticationFactory);
+            } else {
+                serverManagementBuilder.setHttpAuthenticationFactory(httpAuthenticationFactory);
+            }
+
+            serverManagement = serverManagementBuilder.build();
 
             serverManagement.start();
 
@@ -426,4 +439,13 @@ public class UndertowHttpManagementService implements Service<HttpManagement> {
         return httpManagement;
     }
 
+    static HttpAuthenticationFactory getVirtualHttpAuthenticationFactory(final StartContext context) {
+        final ServiceRegistry serviceRegistry = context.getController().getServiceContainer();
+        ServiceName virtualHttpAuthenticationFactoryName = getVirtualHttpAuthenticationFactoryServiceName();
+        ServiceController<?> serviceController = serviceRegistry.getService(virtualHttpAuthenticationFactoryName);
+        if (serviceController == null || serviceController.getState() != ServiceController.State.UP) {
+            return null;
+        }
+        return (HttpAuthenticationFactory) serviceController.getService().getValue();
+    }
 }

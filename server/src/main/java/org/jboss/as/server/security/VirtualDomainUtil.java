@@ -21,6 +21,7 @@ import static org.jboss.as.server.security.VirtualDomainMarkerUtility.virtualDom
 
 import java.util.function.UnaryOperator;
 
+import org.jboss.as.controller.capability.RuntimeCapability;
 import org.jboss.as.server.deployment.DeploymentPhaseContext;
 import org.jboss.as.server.deployment.DeploymentUnit;
 import org.jboss.as.server.deployment.DeploymentUnitProcessingException;
@@ -29,6 +30,7 @@ import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.service.ServiceTarget;
+import org.wildfly.security.auth.server.HttpAuthenticationFactory;
 import org.wildfly.security.auth.server.SecurityDomain;
 import org.wildfly.security.auth.server.SecurityIdentity;
 
@@ -41,6 +43,15 @@ public class VirtualDomainUtil {
 
     public static final ServiceName VIRTUAL_SECURITY_DOMAIN_CREATION_SERVICE = ServiceName.of("org.wildfly.security.virtual-security-domain-creation");
     public static final ServiceName OIDC_VIRTUAL_SECURITY_DOMAIN_CREATION_SERVICE = ServiceName.of("org.wildfly.security.oidc-virtual-security-domain-creation");
+    public static final String VIRTUAL = "virtual";
+
+    private static final String CAPABILITY_BASE = "org.wildfly.security.";
+
+    public static final String HTTP_AUTHENTICATION_FACTORY_CAPABILITY = CAPABILITY_BASE + "http-authentication-factory";
+
+    public static final RuntimeCapability<Void> HTTP_AUTHENTICATION_FACTORY_RUNTIME_CAPABILITY = RuntimeCapability
+            .Builder.of(HTTP_AUTHENTICATION_FACTORY_CAPABILITY, true, HttpAuthenticationFactory.class)
+            .build();
 
     public static VirtualDomainMetaData configureVirtualDomain(DeploymentPhaseContext phaseContext, DeploymentUnit deploymentUnit,
                                                                SecurityDomain.Builder virtualDomainBuilder) throws DeploymentUnitProcessingException {
@@ -130,6 +141,11 @@ public class VirtualDomainUtil {
                 }
             }
         }
+    }
+
+    public static ServiceName getVirtualHttpAuthenticationFactoryServiceName() {
+        RuntimeCapability<Void> runtimeCapability = HTTP_AUTHENTICATION_FACTORY_RUNTIME_CAPABILITY.fromBaseCapability(VIRTUAL);
+        return runtimeCapability.getCapabilityServiceName(HttpAuthenticationFactory.class);
     }
 
     private static ServiceName getCreationServiceName(final VirtualDomainMetaData virtualDomainMetaData) {
